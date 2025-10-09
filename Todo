@@ -1,0 +1,89 @@
+project: An attendance system for the company i am currently doing my youth service for, 
+the project will be an executable pregame (exe file), 
+Accepts two forms of input (staff ID or fingerprint), 
+Logs attendance with timestamps.
+Gives a friendly feedback message (“Have a nice day at work”, etc.).
+Has an admin panel for registering staff, viewing attendance, and exporting CSV logs.
+
+
+
+stack option: Python with PySide6 for UI, SQLite for Database
+
+reasons/advantages: simple syntax, cross-platforms operational, fast development, 
+more permissive licensing (LGPL), official Qt binding from The Qt Company
+
+trade-offs: slower/larger files, additional setup for fingerprint integration
+
+recomendation to who it may concern: use C# with .NET the only disadvantge is the program will only be 
+compatable with windows
+
+
+Dependencies confirmed:
+- Python 3.12.3
+- PySide6 6.10.0 (with PySide6_Addons, PySide6_Essentials, shiboken6)
+- SQLite (built into Python)
+- CSV (built into Python)
+
+
+1. Project Structure:
+      - main.py (application entry point)
+      - ui/ (UI components and layouts)
+      - database/ (SQLite models and operations)
+      - models/ (data models for staff and attendance)
+      - utils/ (helper functions and utilities)
+      - hardware/ (fingerprint scanner integration - added later)
+
+   2. Core Components:
+      - Main attendance interface with ID input (primary focus)
+      - Admin panel with staff registration and attendance viewing
+      - SQLite database with tables for staff and attendance logs
+      - CSV export functionality
+      - Hardware abstraction layer (for future fingerprint integration)
+
+   3. Development Phases:
+
+      - Phase 1: Basic UI and database setup - COMPLETED
+        - Create main window and basic navigation
+        - Set up SQLite database with staff and attendance tables
+        - Design basic UI layouts
+
+      - Phase 2: Staff registration system - COMPLETED
+        - Admin interface for adding staff members
+        - Staff data validation and storage
+        - Staff ID management
+
+      - Phase 3: ID-based attendance functionality
+        - Staff ID input interface - COMPLETED
+        - Timestamp logging - COMPLETED
+        - User feedback messages ("Have a nice day at work", etc.) - COMPLETED
+        - Attendance record storage - COMPLETED
+
+      - Phase 4: Admin panel features
+        - Attendance record viewing - COMPLETED
+        - Staff information management - COMPLETED
+        - CSV export functionality - COMPLETED
+
+      - Phase 5: Fingerprint integration (final phase)
+        - Hardware setup and integration
+        - Fingerprint scanning functionality
+        - Biometric attendance logging
+
+  This phased approach allows you to get a functional ID-based system working first, then extend it with fingerprint
+  capabilities when ready.
+
+
+
+
+  areas to improve on:
+
+  there should be a page to view all registeed staff
+
+  for each staff, the first sign in of the day should be taken as signing in, the second should be signing out
+
+when signing in is done after 8:30am the feedback should be like "staff name you are x mintues late" if the user is early it should be like "staff name you have succefully signed in, have a nice day!", if it is the second time a particuler staff is signing out then it should be "signed out succefully, bye!"
+
+there should be a color code to when sigh in or out is succesful the feedback is green, 
+
+the feedbacks should clear after a set duration, say 5secs
+
+and let the uiux's primary colors be blue and white because thats the comapnys color 
