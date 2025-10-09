@@ -24,7 +24,7 @@ class AdminWidget(QWidget):
         # Title
         title_label = QLabel("Admin Panel")
         title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet("font-size: 18px; font-weight: bold; margin: 20px; color: #1E3A8A;")  # Dark blue
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold; margin: 20px; color: #0F172A;")  # Dark blue-gray for better contrast
         layout.addWidget(title_label)
         
         # Create tab widget for different admin functions
@@ -36,7 +36,8 @@ class AdminWidget(QWidget):
             QTabBar::tab {
                 background: #E0F2FE;
                 padding: 8px;
-                color: #1E3A8A;
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+                font-weight: bold;
             }
             QTabBar::tab:selected {
                 background: #1E3A8A;
@@ -76,13 +77,14 @@ class AdminWidget(QWidget):
                 border-radius: 5px;
                 margin: 10px 0px;
                 padding-top: 15px;
-                color: #1E3A8A;  /* Dark blue */
+                color: #0F172A;  /* Dark blue-gray for better contrast */
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
                 subcontrol-position: top center;
                 padding: 0 5px;
-                color: #1E3A8A;  /* Dark blue */
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+                font-weight: bold;
             }
         """)
         form_layout = QFormLayout()
@@ -93,7 +95,8 @@ class AdminWidget(QWidget):
                 padding: 8px;
                 border: 1px solid #3B82F6;  /* Light blue */
                 border-radius: 4px;
-                color: #1E3A8A;  /* Dark blue */
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+                background-color: white;
             }
             QLineEdit:focus {
                 border: 2px solid #1E3A8A;  /* Dark blue */
@@ -105,7 +108,8 @@ class AdminWidget(QWidget):
                 padding: 8px;
                 border: 1px solid #3B82F6;  /* Light blue */
                 border-radius: 4px;
-                color: #1E3A8A;  /* Dark blue */
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+                background-color: white;
             }
             QLineEdit:focus {
                 border: 2px solid #1E3A8A;  /* Dark blue */
@@ -117,7 +121,8 @@ class AdminWidget(QWidget):
                 padding: 8px;
                 border: 1px solid #3B82F6;  /* Light blue */
                 border-radius: 4px;
-                color: #1E3A8A;  /* Dark blue */
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+                background-color: white;
             }
             QLineEdit:focus {
                 border: 2px solid #1E3A8A;  /* Dark blue */
@@ -262,19 +267,20 @@ class AdminWidget(QWidget):
                 border-radius: 5px;
                 margin: 10px 0px;
                 padding-top: 15px;
-                color: #1E3A8A;  /* Dark blue */
+                color: #0F172A;  /* Dark blue-gray for better contrast */
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
                 subcontrol-position: top center;
                 padding: 0 5px;
-                color: #1E3A8A;  /* Dark blue */
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+                font-weight: bold;
             }
         """)
         export_layout = QVBoxLayout()
         
         export_label = QLabel("Export attendance records to CSV file")
-        export_label.setStyleSheet("color: #1E3A8A;")  # Dark blue
+        export_label.setStyleSheet("color: #0F172A; font-weight: bold;")  # Dark blue-gray for better contrast
         export_layout.addWidget(export_label)
         
         export_button = QPushButton("Export to CSV")

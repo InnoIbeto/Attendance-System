@@ -16,10 +16,14 @@ class AttendanceMainWindow(QMainWindow):
         self.setWindowTitle("SEC(NYSC) Attendance System")
         self.setGeometry(100, 100, 800, 600)
         
-        # Set blue and white color theme
+        # Set blue and white color theme with improved contrast
         self.setStyleSheet("""
             QMainWindow {
                 background-color: white;
+            }
+            QLabel {
+                color: #0F172A;  /* Darker blue-gray for better contrast */
+                font-weight: bold;
             }
             QMenuBar {
                 background-color: #1E3A8A;  /* Dark blue */
@@ -41,6 +45,7 @@ class AttendanceMainWindow(QMainWindow):
             QTabBar::tab {
                 background: #E0F2FE;
                 padding: 8px;
+                color: #1E3A8A;
             }
             QTabBar::tab:selected {
                 background: #1E3A8A;

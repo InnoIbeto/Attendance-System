@@ -23,7 +23,7 @@ class AttendanceWidget(QWidget):
         # Title
         title_label = QLabel("SEC(NYSC) Attendance System")
         title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet("font-size: 18px; font-weight: bold; margin: 20px; color: #1E3A8A;")  # Dark blue
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold; margin: 20px; color: #0F172A;")  # Dark blue-gray for better contrast
         layout.addWidget(title_label)
         
         # Create a group box for attendance input
@@ -35,13 +35,14 @@ class AttendanceWidget(QWidget):
                 border-radius: 5px;
                 margin: 10px 0px;
                 padding-top: 15px;
-                color: #1E3A8A;  /* Dark blue */
+                color: #0F172A;  /* Dark blue-gray for better contrast */
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
                 subcontrol-position: top center;
                 padding: 0 5px;
-                color: #1E3A8A;  /* Dark blue */
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+                font-weight: bold;
             }
         """)
         attendance_layout = QVBoxLayout()
@@ -49,7 +50,7 @@ class AttendanceWidget(QWidget):
         # Staff ID input
         id_layout = QHBoxLayout()
         id_label = QLabel("Staff ID:")
-        id_label.setStyleSheet("color: #1E3A8A;")  # Dark blue
+        id_label.setStyleSheet("color: #0F172A; font-weight: bold;")  # Dark blue-gray for better contrast
         self.id_input = QLineEdit()
         self.id_input.setPlaceholderText("Enter your staff ID")
         self.id_input.setStyleSheet("""
@@ -57,7 +58,8 @@ class AttendanceWidget(QWidget):
                 padding: 8px;
                 border: 1px solid #3B82F6;  /* Light blue */
                 border-radius: 4px;
-                color: #1E3A8A;  /* Dark blue */
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+                background-color: white;
             }
             QLineEdit:focus {
                 border: 2px solid #1E3A8A;  /* Dark blue */
@@ -70,7 +72,7 @@ class AttendanceWidget(QWidget):
         # Or fingerprint option
         fingerprint_label = QLabel("Or use fingerprint scanner")
         fingerprint_label.setAlignment(Qt.AlignCenter)
-        fingerprint_label.setStyleSheet("color: #1E3A8A;")  # Dark blue
+        fingerprint_label.setStyleSheet("color: #0F172A; font-weight: bold;")  # Dark blue-gray for better contrast
         attendance_layout.addWidget(fingerprint_label)
         
         # Submit button

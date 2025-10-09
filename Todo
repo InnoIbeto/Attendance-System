@@ -68,22 +68,20 @@ Dependencies confirmed:
         - Fingerprint scanning functionality
         - Biometric attendance logging
 
-  This phased approach allows you to get a functional ID-based system working first, then extend it with fingerprint
-  capabilities when ready.
-
+   4. Optimization Phases:
+      - Changed App color Scheme to White & Blue to macth SEC's color Scheme
+      - Modified color codes to eansure that tittle, header and background colors do not contrast 
 
 
 
   areas to improve on:
 
-  there should be a page to view all registeed staff
+  Attendance records page:
 
-  for each staff, the first sign in of the day should be taken as signing in, the second should be signing out
+  Improve the table structure by renaming the current time column to Time in, and add another column timeout
 
-when signing in is done after 8:30am the feedback should be like "staff name you are x mintues late" if the user is early it should be like "staff name you have succefully signed in, have a nice day!", if it is the second time a particuler staff is signing out then it should be "signed out succefully, bye!"
+  Map the timestamp date to the appropate columns, for esch staff the first record goes to time in, the second goes to time out. (this way i have only 1 row per day)
 
-there should be a color code to when sigh in or out is succesful the feedback is green, 
+  Currently for each user, from there second log, they get the feedback "staff name, succefull.. bye" and logs the timestamp record each time, in needs to be improved so that from the 3rd attempt is gives a feedback "staff name, you have signed out already, contact HR if an error was made" 
 
-the feedbacks should clear after a set duration, say 5secs
-
-and let the uiux's primary colors be blue and white because thats the comapnys color 
+  The table is to too postioned to the left, i need to widen the columns so the page real estate lmao is properly used
