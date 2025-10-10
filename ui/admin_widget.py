@@ -180,11 +180,11 @@ class AdminWidget(QWidget):
                 border: 1px solid #3B82F6;  /* Light blue */
             }
         """)
-        # Set column widths to better utilize page real estate
+        # Staff Records
         header = self.staff_table.horizontalHeader()
-        header.setStretchLastSection(True)  # Allow the last section to stretch
+        header.setSectionResizeMode(QHeaderView.Stretch)  # Proportional resizing
         self.staff_table.setColumnWidth(0, 120)  # Staff ID
-        self.staff_table.setColumnWidth(1, 200)  # Name
+        self.staff_table.setColumnWidth(1, 300)  # Name (2x Department)
         self.staff_table.setColumnWidth(2, 150)  # Department
         
         layout.addWidget(QLabel("Registered Staff"))
@@ -235,7 +235,7 @@ class AdminWidget(QWidget):
             }
         """)
         
-        # Set column proportions: Staff ID (smallest), Name (2x Department), others same size
+        # Attendance Records
         header = self.attendance_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)  # Proportional resizing
         self.attendance_table.setColumnWidth(0, 100)  # Staff ID (smallest)
@@ -358,7 +358,9 @@ class AdminWidget(QWidget):
             for col_idx, data in enumerate(record):
                 if data is None:
                     data = ""  # Display empty string instead of "None"
-                self.attendance_table.setItem(row_idx, col_idx, QTableWidgetItem(str(data)))
+                item = QTableWidgetItem(str(data))
+                item.setTextAlignment(Qt.AlignCenter)  # Center the text
+                self.attendance_table.setItem(row_idx, col_idx, item)
     
     def refresh_staff(self):
         # Fetch staff records from the database
@@ -369,7 +371,9 @@ class AdminWidget(QWidget):
         for row_idx, record in enumerate(records):
             self.staff_table.insertRow(row_idx)
             for col_idx, data in enumerate(record):
-                self.staff_table.setItem(row_idx, col_idx, QTableWidgetItem(str(data)))
+                item = QTableWidgetItem(str(data))
+                item.setTextAlignment(Qt.AlignCenter)  # Center the text
+                self.staff_table.setItem(row_idx, col_idx, item)
     
     def export_to_csv(self):
         from PySide6.QtWidgets import QMessageBox, QFileDialog

@@ -74,7 +74,17 @@ Dependencies confirmed:
       - Improved Scheme/db table structure to fit the proper attendance app functionality (include time out and renamed postion to department)
       - adjusted table column sizing to be more reponsive.
       - changed late feedback to be output time in hours and mins 
+      - improved staff record's column responsiveness  
+      - alligned text to center on staff records and attendance tables 
 
 
 
   areas to improve on:
+
+ add the sec building logo on the attendance page, when i hit enter it should log attendance (that way they are 2 options either the button or hitting enter)
+
+ Add CRUD functionality to Staff Records page 
+
+ protect the admin panel (need password to access it anytime you want to view it)
+ 
+ improve how the Export data page looks 

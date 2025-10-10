@@ -130,10 +130,10 @@ class AttendanceWidget(QWidget):
                 if staff_info:
                     staff_name = staff_info[1]  # Name is the second element in the tuple
                     feedback_text = f"{staff_name}, you have signed out already, contact HR if an error was made"
-                    self.feedback_label.setStyleSheet("color: red; font-weight: bold; margin: 10px;")
+                    self.feedback_label.setStyleSheet("color: #DC2626; font-weight: bold; margin: 10px;")  # Darker red for better contrast
                 else:
                     feedback_text = "You have signed out already, contact HR if an error was made"
-                    self.feedback_label.setStyleSheet("color: red; font-weight: bold; margin: 10px;")
+                    self.feedback_label.setStyleSheet("color: #DC2626; font-weight: bold; margin: 10px;")  # Darker red for better contrast
             else:
                 # Get staff information
                 staff_info = self.db.get_staff(staff_id)
@@ -156,21 +156,21 @@ class AttendanceWidget(QWidget):
                             else:
                                 feedback_text = f"{staff_name}, you are {minutes_late} minute(s) late"
                             
-                            self.feedback_label.setStyleSheet("color: orange; font-weight: bold; margin: 10px;")
+                            self.feedback_label.setStyleSheet("color: #DC2626; font-weight: bold; margin: 10px;")  # Red for being late
                         else:
                             # On-time arrival
                             feedback_text = f"{staff_name}, you have successfully signed in, have a nice day!"
-                            self.feedback_label.setStyleSheet("color: green; font-weight: bold; margin: 10px;")
+                            self.feedback_label.setStyleSheet("color: #16A34A; font-weight: bold; margin: 10px;")  # Green for success
                     else:  # Sign Out
                         feedback_text = f"{staff_name}, signed out successfully, bye!"
-                        self.feedback_label.setStyleSheet("color: green; font-weight: bold; margin: 10px;")
+                        self.feedback_label.setStyleSheet("color: #16A34A; font-weight: bold; margin: 10px;")  # Green for success
                 else:
                     feedback_text = "Attendance logged successfully!\nHave a nice day at work!"
-                    self.feedback_label.setStyleSheet("color: green; font-weight: bold; margin: 10px;")
+                    self.feedback_label.setStyleSheet("color: #16A34A; font-weight: bold; margin: 10px;")  # Green for success
         else:
             # Staff ID doesn't exist in the database
             feedback_text = "Invalid staff ID. Please check and try again."
-            self.feedback_label.setStyleSheet("color: red; font-weight: bold; margin: 10px;")
+            self.feedback_label.setStyleSheet("color: #DC2626; font-weight: bold; margin: 10px;")  # Darker red for better contrast
         
         self.feedback_label.setText(feedback_text)
         
