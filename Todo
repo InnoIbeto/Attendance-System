@@ -70,18 +70,11 @@ Dependencies confirmed:
 
    4. Optimization Phases:
       - Changed App color Scheme to White & Blue to macth SEC's color Scheme
-      - Modified color codes to eansure that tittle, header and background colors do not contrast 
+      - Modified color codes to eansure that tittle, header and background colors do not contrast
+      - Improved Scheme/db table structure to fit the proper attendance app functionality (include time out and renamed postion to department)
+      - adjusted table column sizing to be more reponsive.
+      - changed late feedback to be output time in hours and mins 
 
 
 
   areas to improve on:
-
-  Attendance records page:
-
-  Improve the table structure by renaming the current time column to Time in, and add another column timeout
-
-  Map the timestamp date to the appropate columns, for esch staff the first record goes to time in, the second goes to time out. (this way i have only 1 row per day)
-
-  Currently for each user, from there second log, they get the feedback "staff name, succefull.. bye" and logs the timestamp record each time, in needs to be improved so that from the 3rd attempt is gives a feedback "staff name, you have signed out already, contact HR if an error was made" 
-
-  The table is to too postioned to the left, i need to widen the columns so the page real estate lmao is properly used

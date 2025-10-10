@@ -120,32 +120,53 @@ class AttendanceWidget(QWidget):
         current_time = now.time()
         late_arrival_time = datetime.strptime("08:30", "%H:%M").time()
         
-        # Try to log attendance in the database - returns the action type (Sign In/Sign Out)
+        # Try to log attendance in the database - returns the action type (Sign In/Sign Out/Already Signed Out)
         action = self.db.log_attendance(staff_id)
         
         if action:
-            # Get staff information
-            staff_info = self.db.get_staff(staff_id)
-            if staff_info:
-                staff_name = staff_info[1]  # Name is the second element in the tuple
-                
-                if action == "Sign In":
-                    if current_time > late_arrival_time:
-                        # Late arrival after 8:30am
-                        minutes_late = (datetime.combine(now.date(), current_time) - 
-                                        datetime.combine(now.date(), late_arrival_time)).seconds // 60
-                        feedback_text = f"{staff_name}, you are {minutes_late} minutes late"
-                        self.feedback_label.setStyleSheet("color: orange; font-weight: bold; margin: 10px;")
-                    else:
-                        # On-time arrival
-                        feedback_text = f"{staff_name}, you have successfully signed in, have a nice day!"
-                        self.feedback_label.setStyleSheet("color: green; font-weight: bold; margin: 10px;")
-                else:  # Sign Out
-                    feedback_text = f"{staff_name}, signed out successfully, bye!"
-                    self.feedback_label.setStyleSheet("color: green; font-weight: bold; margin: 10px;")
+            if action == "Already Signed Out":
+                # Staff has already signed out for the day
+                staff_info = self.db.get_staff(staff_id)
+                if staff_info:
+                    staff_name = staff_info[1]  # Name is the second element in the tuple
+                    feedback_text = f"{staff_name}, you have signed out already, contact HR if an error was made"
+                    self.feedback_label.setStyleSheet("color: red; font-weight: bold; margin: 10px;")
+                else:
+                    feedback_text = "You have signed out already, contact HR if an error was made"
+                    self.feedback_label.setStyleSheet("color: red; font-weight: bold; margin: 10px;")
             else:
-                feedback_text = "Attendance logged successfully!\nHave a nice day at work!"
-                self.feedback_label.setStyleSheet("color: green; font-weight: bold; margin: 10px;")
+                # Get staff information
+                staff_info = self.db.get_staff(staff_id)
+                if staff_info:
+                    staff_name = staff_info[1]  # Name is the second element in the tuple
+                    
+                    if action == "Sign In":
+                        if current_time > late_arrival_time:
+                            # Late arrival after 8:30am
+                            total_seconds_late = (datetime.combine(now.date(), current_time) - 
+                                            datetime.combine(now.date(), late_arrival_time)).seconds
+                            hours_late = total_seconds_late // 3600
+                            minutes_late = (total_seconds_late % 3600) // 60
+                            
+                            if hours_late > 0:
+                                if minutes_late > 0:
+                                    feedback_text = f"{staff_name}, you are {hours_late} hour(s) and {minutes_late} minute(s) late"
+                                else:
+                                    feedback_text = f"{staff_name}, you are {hours_late} hour(s) late"
+                            else:
+                                feedback_text = f"{staff_name}, you are {minutes_late} minute(s) late"
+                            
+                            self.feedback_label.setStyleSheet("color: orange; font-weight: bold; margin: 10px;")
+                        else:
+                            # On-time arrival
+                            feedback_text = f"{staff_name}, you have successfully signed in, have a nice day!"
+                            self.feedback_label.setStyleSheet("color: green; font-weight: bold; margin: 10px;")
+                    else:  # Sign Out
+                        feedback_text = f"{staff_name}, signed out successfully, bye!"
+                        self.feedback_label.setStyleSheet("color: green; font-weight: bold; margin: 10px;")
+                else:
+                    feedback_text = "Attendance logged successfully!\nHave a nice day at work!"
+                    self.feedback_label.setStyleSheet("color: green; font-weight: bold; margin: 10px;")
         else:
             # Staff ID doesn't exist in the database
             feedback_text = "Invalid staff ID. Please check and try again."

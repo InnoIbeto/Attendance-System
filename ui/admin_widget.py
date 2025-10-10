@@ -5,7 +5,7 @@ Admin widget for managing staff and viewing attendance
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QPushButton, QLineEdit, QTableWidget, 
-    QTableWidgetItem, QTabWidget, QFormLayout, QGroupBox
+    QTableWidgetItem, QTabWidget, QFormLayout, QGroupBox, QHeaderView
 )
 from PySide6.QtCore import Qt
 from database import DatabaseManager
@@ -115,8 +115,8 @@ class AdminWidget(QWidget):
                 border: 2px solid #1E3A8A;  /* Dark blue */
             }
         """)
-        self.staff_position_input = QLineEdit()
-        self.staff_position_input.setStyleSheet("""
+        self.staff_department_input = QLineEdit()
+        self.staff_department_input.setStyleSheet("""
             QLineEdit {
                 padding: 8px;
                 border: 1px solid #3B82F6;  /* Light blue */
@@ -131,7 +131,7 @@ class AdminWidget(QWidget):
         
         form_layout.addRow("Full Name:", self.staff_name_input)
         form_layout.addRow("Staff ID:", self.staff_id_input)
-        form_layout.addRow("Position:", self.staff_position_input)
+        form_layout.addRow("Department:", self.staff_department_input)
         
         register_button = QPushButton("Register Staff")
         register_button.clicked.connect(self.register_staff)
@@ -166,7 +166,7 @@ class AdminWidget(QWidget):
         # Table to display staff records
         self.staff_table = QTableWidget()
         self.staff_table.setColumnCount(3)
-        self.staff_table.setHorizontalHeaderLabels(["Staff ID", "Name", "Position"])
+        self.staff_table.setHorizontalHeaderLabels(["Staff ID", "Name", "Department"])
         self.staff_table.setStyleSheet("""
             QTableWidget {
                 border: 1px solid #3B82F6;  /* Light blue */
@@ -180,6 +180,12 @@ class AdminWidget(QWidget):
                 border: 1px solid #3B82F6;  /* Light blue */
             }
         """)
+        # Set column widths to better utilize page real estate
+        header = self.staff_table.horizontalHeader()
+        header.setStretchLastSection(True)  # Allow the last section to stretch
+        self.staff_table.setColumnWidth(0, 120)  # Staff ID
+        self.staff_table.setColumnWidth(1, 200)  # Name
+        self.staff_table.setColumnWidth(2, 150)  # Department
         
         layout.addWidget(QLabel("Registered Staff"))
         layout.addWidget(self.staff_table)
@@ -213,8 +219,8 @@ class AdminWidget(QWidget):
         
         # Table to display attendance records
         self.attendance_table = QTableWidget()
-        self.attendance_table.setColumnCount(4)
-        self.attendance_table.setHorizontalHeaderLabels(["Staff ID", "Name", "Date", "Time"])
+        self.attendance_table.setColumnCount(6)
+        self.attendance_table.setHorizontalHeaderLabels(["Staff ID", "Name", "Department", "Date", "Time In", "Time Out"])
         self.attendance_table.setStyleSheet("""
             QTableWidget {
                 border: 1px solid #3B82F6;  /* Light blue */
@@ -228,6 +234,16 @@ class AdminWidget(QWidget):
                 border: 1px solid #3B82F6;  /* Light blue */
             }
         """)
+        
+        # Set column proportions: Staff ID (smallest), Name (2x Department), others same size
+        header = self.attendance_table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)  # Proportional resizing
+        self.attendance_table.setColumnWidth(0, 100)  # Staff ID (smallest)
+        self.attendance_table.setColumnWidth(1, 300)  # Name (2x Department size)
+        self.attendance_table.setColumnWidth(2, 150)  # Department
+        self.attendance_table.setColumnWidth(3, 120)  # Date (same as Time In/Out)
+        self.attendance_table.setColumnWidth(4, 120)  # Time In (same as Date/Time Out)
+        self.attendance_table.setColumnWidth(5, 120)  # Time Out (same as Date/Time In)
         
         layout.addWidget(QLabel("Attendance Records"))
         layout.addWidget(self.attendance_table)
@@ -312,14 +328,14 @@ class AdminWidget(QWidget):
     def register_staff(self):
         name = self.staff_name_input.text()
         staff_id = self.staff_id_input.text()
-        position = self.staff_position_input.text()
+        department = self.staff_department_input.text()
         
-        if name and staff_id and position:
-            success = self.db.add_staff(staff_id, name, position)
+        if name and staff_id and department:
+            success = self.db.add_staff(staff_id, name, department)
             if success:
                 self.staff_name_input.clear()
                 self.staff_id_input.clear()
-                self.staff_position_input.clear()
+                self.staff_department_input.clear()
                 
                 from PySide6.QtWidgets import QMessageBox
                 QMessageBox.information(self, "Registration", f"Staff {name} registered successfully!")
@@ -338,7 +354,10 @@ class AdminWidget(QWidget):
         
         for row_idx, record in enumerate(records):
             self.attendance_table.insertRow(row_idx)
+            # Insert the data into the appropriate columns
             for col_idx, data in enumerate(record):
+                if data is None:
+                    data = ""  # Display empty string instead of "None"
                 self.attendance_table.setItem(row_idx, col_idx, QTableWidgetItem(str(data)))
     
     def refresh_staff(self):
@@ -372,7 +391,7 @@ class AdminWidget(QWidget):
             try:
                 with open(filename, 'w', newline='') as csvfile:
                     writer = csv.writer(csvfile)
-                    writer.writerow(['Staff ID', 'Name', 'Date', 'Time'])  # Header
+                    writer.writerow(['Staff ID', 'Name', 'Department', 'Date', 'Time In', 'Time Out'])  # Header
                     writer.writerows(records)  # Data rows
                 
                 QMessageBox.information(self, "Export", f"Attendance records exported successfully to {filename}")
