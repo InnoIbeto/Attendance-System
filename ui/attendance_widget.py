@@ -4,11 +4,35 @@ Attendance widget for staff to log attendance
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, 
-    QLabel, QPushButton, QLineEdit, QMessageBox, QGroupBox
+    QLabel, QPushButton, QLineEdit, QMessageBox, QGroupBox, QStackedLayout
 )
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QPixmap, QPainter, QColor
 from database import DatabaseManager
 from datetime import datetime
+
+
+class BackgroundWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.background_image = QPixmap("images/building.jpg")
+        if self.background_image.isNull():
+            # Create a default background if image is not found
+            self.background_image = QPixmap(800, 200)
+            self.background_image.fill(QColor("#E0F2FE"))
+        
+        self.setMinimumHeight(200)
+        self.setMaximumHeight(300)
+    
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        # Scale the background to match widget size
+        scaled_bg = self.background_image.scaled(
+            self.width(), self.height(), 
+            Qt.KeepAspectRatioByExpanding, 
+            Qt.SmoothTransformation
+        )
+        painter.drawPixmap(0, 0, scaled_bg)
 
 
 class AttendanceWidget(QWidget):
@@ -20,11 +44,40 @@ class AttendanceWidget(QWidget):
     def init_ui(self):
         layout = QVBoxLayout()
         
-        # Title
+        # Create background container
+        bg_widget = BackgroundWidget()
+        bg_layout = QVBoxLayout(bg_widget)
+        
+        # Create top layout for logo (top-right aligned)
+        top_layout = QHBoxLayout()
+        top_layout.addStretch()  # Add stretch to push logo to the right
+        
+        # Add logo to top-right
+        logo_label = QLabel()
+        logo_pixmap = QPixmap("images/logo.png")
+        if not logo_pixmap.isNull():
+            logo_pixmap = logo_pixmap.scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            logo_label.setPixmap(logo_pixmap)
+        else:
+            logo_label.setText("SEC Logo")
+            logo_label.setStyleSheet("color: #1E3A8A; font-weight: bold; font-size: 14px;")
+        
+        top_layout.addWidget(logo_label)
+        bg_layout.addLayout(top_layout)
+        
+        # Add stretch to vertically center the title
+        bg_layout.addStretch()
+        
+        # Add title in the middle of the background
         title_label = QLabel("SEC(NYSC) Attendance System")
         title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet("font-size: 18px; font-weight: bold; margin: 20px; color: #0F172A;")  # Dark blue-gray for better contrast
-        layout.addWidget(title_label)
+        title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: white; margin: 10px;")
+        bg_layout.addWidget(title_label)
+        
+        # Add stretch at the bottom
+        bg_layout.addStretch()
+        
+        layout.addWidget(bg_widget)
         
         # Create a group box for attendance input
         attendance_group = QGroupBox("Log Attendance")
@@ -65,6 +118,8 @@ class AttendanceWidget(QWidget):
                 border: 2px solid #1E3A8A;  /* Dark blue */
             }
         """)
+        # Connect Enter key press to log attendance
+        self.id_input.returnPressed.connect(self.log_attendance)
         id_layout.addWidget(id_label)
         id_layout.addWidget(self.id_input)
         attendance_layout.addLayout(id_layout)

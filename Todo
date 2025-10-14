@@ -79,12 +79,3 @@ Dependencies confirmed:
 
 
 
-  areas to improve on:
-
- add the sec building logo on the attendance page, when i hit enter it should log attendance (that way they are 2 options either the button or hitting enter)
-
- Add CRUD functionality to Staff Records page 
-
- protect the admin panel (need password to access it anytime you want to view it)
- 
- improve how the Export data page looks 

@@ -91,16 +91,18 @@ class DatabaseManager:
                 cursor.execute("DROP TABLE attendance")
                 
                 # Create new attendance table with time_in and time_out columns
+                # Include name and department to preserve historical data when staff is deleted
                 cursor.execute('''
                     CREATE TABLE attendance (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         staff_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        department TEXT NOT NULL,
                         date TEXT NOT NULL,
                         time_in TEXT,
                         time_out TEXT,
                         timestamp_in DATETIME,
                         timestamp_out DATETIME,
-                        FOREIGN KEY (staff_id) REFERENCES staff (staff_id),
                         UNIQUE(staff_id, date)
                     )
                 ''')
@@ -108,9 +110,17 @@ class DatabaseManager:
                 # Migrate old data (for now, putting all old time values as time_in)
                 for row in old_data:
                     staff_id, date, time = row
+                    # Get staff info to set name and department
+                    staff_info = self.get_staff(staff_id)
+                    if staff_info:
+                        name = staff_info[1]
+                        department = staff_info[2]
+                    else:
+                        name = "Unknown"
+                        department = "Unknown"
                     cursor.execute(
-                        "INSERT OR IGNORE INTO attendance (staff_id, date, time_in) VALUES (?, ?, ?)",
-                        (staff_id, date, time)
+                        "INSERT OR IGNORE INTO attendance (staff_id, name, department, date, time_in) VALUES (?, ?, ?, ?, ?)",
+                        (staff_id, name, department, date, time)
                     )
             elif 'time_in' not in columns:
                 # Create new attendance table if it doesn't have the required columns
@@ -118,27 +128,30 @@ class DatabaseManager:
                     CREATE TABLE IF NOT EXISTS attendance (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         staff_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        department TEXT NOT NULL,
                         date TEXT NOT NULL,
                         time_in TEXT,
                         time_out TEXT,
                         timestamp_in DATETIME,
                         timestamp_out DATETIME,
-                        FOREIGN KEY (staff_id) REFERENCES staff (staff_id),
                         UNIQUE(staff_id, date)
                     )
                 ''')
         else:
             # Create new attendance table if it doesn't exist
+            # Include name and department to preserve historical data when staff is deleted
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS attendance (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     staff_id TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    department TEXT NOT NULL,
                     date TEXT NOT NULL,
                     time_in TEXT,
                     time_out TEXT,
                     timestamp_in DATETIME,
                     timestamp_out DATETIME,
-                    FOREIGN KEY (staff_id) REFERENCES staff (staff_id),
                     UNIQUE(staff_id, date)
                 )
             ''')
@@ -198,10 +211,19 @@ class DatabaseManager:
         result = cursor.fetchone()
         
         if result is None:
+            # Get staff information to store with the attendance record
+            staff_info = self.get_staff(staff_id)
+            if staff_info:
+                name = staff_info[1]
+                department = staff_info[2]
+            else:
+                name = "Unknown"
+                department = "Unknown"
+            
             # First entry of the day - sign in
             cursor.execute(
-                "INSERT INTO attendance (staff_id, date, time_in, timestamp_in) VALUES (?, ?, ?, ?)",
-                (staff_id, date, time, timestamp)
+                "INSERT INTO attendance (staff_id, name, department, date, time_in, timestamp_in) VALUES (?, ?, ?, ?, ?, ?)",
+                (staff_id, name, department, date, time, timestamp)
             )
             conn.commit()
             conn.close()
@@ -242,9 +264,8 @@ class DatabaseManager:
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT a.staff_id, s.name, s.department, a.date, a.time_in, a.time_out
+            SELECT a.staff_id, a.name, a.department, a.date, a.time_in, a.time_out
             FROM attendance a
-            LEFT JOIN staff s ON a.staff_id = s.staff_id
             ORDER BY a.timestamp_in DESC
         ''')
         results = cursor.fetchall()
@@ -262,3 +283,39 @@ class DatabaseManager:
         
         conn.close()
         return results
+    
+    def update_staff(self, staff_id: str, name: str, department: str) -> bool:
+        """Update staff information"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute(
+                "UPDATE staff SET name = ?, department = ? WHERE staff_id = ?",
+                (name, department, staff_id)
+            )
+            conn.commit()
+            updated = cursor.rowcount > 0
+            conn.close()
+            return updated
+        except Exception as e:
+            conn.close()
+            return False
+    
+    def delete_staff(self, staff_id: str) -> bool:
+        """Delete a staff member (attendance records remain for audit purposes)"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            # Delete only the staff record, not the attendance records
+            # This allows us to keep historical attendance for audit purposes
+            # while preventing the staff member from logging new attendance
+            cursor.execute("DELETE FROM staff WHERE staff_id = ?", (staff_id,))
+            conn.commit()
+            deleted = cursor.rowcount > 0
+            conn.close()
+            return deleted
+        except Exception as e:
+            conn.close()
+            return False
