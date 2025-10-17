@@ -89,3 +89,31 @@ create a page were users can view staff/attendance based on department
 pointers for Mr Peter:
 query logic(3 times a ...)
 2 db dept table
+
+
+
+Feedback To-Do Summary
+
+From Mr. Ugo
+
+- Implement pagination for both Staff and Attendance tables and other necessary pages to improve data navigation.
+
+- Add filter options (e.g., date range, department, staff name) before exporting attendance data to CSV.
+
+From Mr. Ukpong
+
+- Create a new Department Page where users can view Staff and Attendance records grouped by department.
+
+From Mr. Peter
+
+- Restructure the database to include a separate Departments table for scalability.
+
+- Link the Staff table to the Departments table using department_id.
+
+- Implement a query logic to identify staff who have been late:
+
+  * Once in a month, and
+
+  * More than 3 times in a month
+
+  * Create a dedicated Lateness Report Page to display these results with filtering options.
