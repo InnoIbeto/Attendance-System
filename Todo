@@ -106,7 +106,7 @@ From Mr. Ukpong
 
 From Mr. Peter
 
-- Restructure the database to include a separate Departments table for scalability.
+- taskk 1: Restructure the database to include a separate Departments table for scalability.
 
 - Link the Staff table to the Departments table using department_id.
 

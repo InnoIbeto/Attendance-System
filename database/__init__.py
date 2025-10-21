@@ -18,131 +18,39 @@ class DatabaseManager:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        # Check if the old staff table exists and migrate if needed
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='staff';")
-        table_exists = cursor.fetchone()
-        
-        if table_exists:
-            # Check if the old schema has the 'position' column and no 'department' column
-            cursor.execute("PRAGMA table_info(staff)")
-            columns = [column[1] for column in cursor.fetchall()]
-            
-            if 'position' in columns and 'department' not in columns:
-                # Old schema exists - backup data and recreate table
-                cursor.execute("SELECT staff_id, name, position, created_at FROM staff")
-                old_data = cursor.fetchall()
-                
-                # Drop old table
-                cursor.execute("DROP TABLE staff")
-                
-                # Create new staff table with department column
-                cursor.execute('''
-                    CREATE TABLE staff (
-                        staff_id TEXT PRIMARY KEY,
-                        name TEXT NOT NULL,
-                        department TEXT NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # Migrate old data (mapping position to department)
-                for row in old_data:
-                    staff_id, name, position, created_at = row
-                    cursor.execute(
-                        "INSERT INTO staff (staff_id, name, department, created_at) VALUES (?, ?, ?, ?)",
-                        (staff_id, name, position, created_at)
-                    )
-            elif 'department' not in columns:
-                # Create new staff table if it doesn't have the required column
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS staff (
-                        staff_id TEXT PRIMARY KEY,
-                        name TEXT NOT NULL,
-                        department TEXT NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-        else:
-            # Create new staff table if it doesn't exist
+        # Create departments table if it doesn't exist
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='departments';")
+        departments_table_exists = cursor.fetchone()
+        if not departments_table_exists:
             cursor.execute('''
-                CREATE TABLE IF NOT EXISTS staff (
-                    staff_id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    department TEXT NOT NULL,
+                CREATE TABLE departments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    description TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
         
-        # Check if the old attendance table exists and migrate if needed
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='attendance';")
-        table_exists = cursor.fetchone()
-        
-        if table_exists:
-            # Check if the old schema has the 'time' column and no 'time_in'/'time_out' columns
-            cursor.execute("PRAGMA table_info(attendance)")
-            columns = [column[1] for column in cursor.fetchall()]
-            
-            if 'time' in columns and 'time_in' not in columns:
-                # Old schema exists - backup data and recreate table
-                cursor.execute("SELECT staff_id, date, time FROM attendance")
-                old_data = cursor.fetchall()
-                
-                # Drop old table
-                cursor.execute("DROP TABLE attendance")
-                
-                # Create new attendance table with time_in and time_out columns
-                # Include name and department to preserve historical data when staff is deleted
-                cursor.execute('''
-                    CREATE TABLE attendance (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        staff_id TEXT NOT NULL,
-                        name TEXT NOT NULL,
-                        department TEXT NOT NULL,
-                        date TEXT NOT NULL,
-                        time_in TEXT,
-                        time_out TEXT,
-                        timestamp_in DATETIME,
-                        timestamp_out DATETIME,
-                        UNIQUE(staff_id, date)
-                    )
-                ''')
-                
-                # Migrate old data (for now, putting all old time values as time_in)
-                for row in old_data:
-                    staff_id, date, time = row
-                    # Get staff info to set name and department
-                    staff_info = self.get_staff(staff_id)
-                    if staff_info:
-                        name = staff_info[1]
-                        department = staff_info[2]
-                    else:
-                        name = "Unknown"
-                        department = "Unknown"
-                    cursor.execute(
-                        "INSERT OR IGNORE INTO attendance (staff_id, name, department, date, time_in) VALUES (?, ?, ?, ?, ?)",
-                        (staff_id, name, department, date, time)
-                    )
-            elif 'time_in' not in columns:
-                # Create new attendance table if it doesn't have the required columns
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS attendance (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        staff_id TEXT NOT NULL,
-                        name TEXT NOT NULL,
-                        department TEXT NOT NULL,
-                        date TEXT NOT NULL,
-                        time_in TEXT,
-                        time_out TEXT,
-                        timestamp_in DATETIME,
-                        timestamp_out DATETIME,
-                        UNIQUE(staff_id, date)
-                    )
-                ''')
-        else:
-            # Create new attendance table if it doesn't exist
-            # Include name and department to preserve historical data when staff is deleted
+        # Create staff table if it doesn't exist (with department_id)
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='staff';")
+        staff_table_exists = cursor.fetchone()
+        if not staff_table_exists:
             cursor.execute('''
-                CREATE TABLE IF NOT EXISTS attendance (
+                CREATE TABLE staff (
+                    staff_id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    department_id INTEGER NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (department_id) REFERENCES departments (id)
+                )
+            ''')
+        
+        # Create attendance table if it doesn't exist
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='attendance';")
+        attendance_table_exists = cursor.fetchone()
+        if not attendance_table_exists:
+            cursor.execute('''
+                CREATE TABLE attendance (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     staff_id TEXT NOT NULL,
                     name TEXT NOT NULL,
@@ -160,14 +68,25 @@ class DatabaseManager:
         conn.close()
     
     def add_staff(self, staff_id: str, name: str, department: str):
-        """Add a new staff member to the database"""
+        """Add a new staff member to the database - updated to work with department name"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
         try:
+            # Get department_id based on department name
+            cursor.execute("SELECT id FROM departments WHERE name = ?", (department,))
+            dept_result = cursor.fetchone()
+            
+            if not dept_result:
+                # Department doesn't exist, create it
+                cursor.execute("INSERT INTO departments (name) VALUES (?)", (department,))
+                department_id = cursor.lastrowid
+            else:
+                department_id = dept_result[0]
+            
             cursor.execute(
-                "INSERT INTO staff (staff_id, name, department) VALUES (?, ?, ?)",
-                (staff_id, name, department)
+                "INSERT INTO staff (staff_id, name, department_id) VALUES (?, ?, ?)",
+                (staff_id, name, department_id)
             )
             conn.commit()
             return True
@@ -178,11 +97,17 @@ class DatabaseManager:
             conn.close()
     
     def get_staff(self, staff_id: str) -> Optional[tuple]:
-        """Get staff information by ID"""
+        """Get staff information by ID - updated to work with department_id"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        cursor.execute("SELECT staff_id, name, department FROM staff WHERE staff_id = ?", (staff_id,))
+        # Join staff with departments to get department name
+        cursor.execute("""
+            SELECT s.staff_id, s.name, d.name 
+            FROM staff s
+            JOIN departments d ON s.department_id = d.id
+            WHERE s.staff_id = ?
+        """, (staff_id,))
         result = cursor.fetchone()
         
         conn.close()
@@ -274,25 +199,42 @@ class DatabaseManager:
         return results
     
     def get_all_staff(self) -> List[tuple]:
-        """Get all staff members"""
+        """Get all staff members - updated to work with department_id"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        cursor.execute("SELECT staff_id, name, department FROM staff ORDER BY name")
+        # Join staff with departments to get department name
+        cursor.execute("""
+            SELECT s.staff_id, s.name, d.name 
+            FROM staff s
+            JOIN departments d ON s.department_id = d.id
+            ORDER BY s.name
+        """)
         results = cursor.fetchall()
         
         conn.close()
         return results
     
     def update_staff(self, staff_id: str, name: str, department: str) -> bool:
-        """Update staff information"""
+        """Update staff information - updated to work with department name"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
         try:
+            # Get department_id based on department name
+            cursor.execute("SELECT id FROM departments WHERE name = ?", (department,))
+            dept_result = cursor.fetchone()
+            
+            if not dept_result:
+                # Department doesn't exist, create it
+                cursor.execute("INSERT INTO departments (name) VALUES (?)", (department,))
+                department_id = cursor.lastrowid
+            else:
+                department_id = dept_result[0]
+            
             cursor.execute(
-                "UPDATE staff SET name = ?, department = ? WHERE staff_id = ?",
-                (name, department, staff_id)
+                "UPDATE staff SET name = ?, department_id = ? WHERE staff_id = ?",
+                (name, department_id, staff_id)
             )
             conn.commit()
             updated = cursor.rowcount > 0
@@ -302,6 +244,239 @@ class DatabaseManager:
             conn.close()
             return False
     
+    def add_department(self, name: str, description: str = "") -> bool:
+        """Add a new department to the database"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute(
+                "INSERT INTO departments (name, description) VALUES (?, ?)",
+                (name, description)
+            )
+            conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            # Department name already exists
+            return False
+        finally:
+            conn.close()
+
+    def get_department_by_id(self, dept_id: int) -> Optional[tuple]:
+        """Get department information by ID"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT id, name, description FROM departments WHERE id = ?", (dept_id,))
+        result = cursor.fetchone()
+        
+        conn.close()
+        return result
+    
+    def get_department_by_name(self, name: str) -> Optional[tuple]:
+        """Get department information by name"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT id, name, description FROM departments WHERE name = ?", (name,))
+        result = cursor.fetchone()
+        
+        conn.close()
+        return result
+
+    def get_all_departments(self) -> List[tuple]:
+        """Get all departments"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT id, name, description FROM departments ORDER BY name")
+        results = cursor.fetchall()
+        
+        conn.close()
+        return results
+
+    def update_department(self, dept_id: int, name: str, description: str = "") -> bool:
+        """Update department information"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute(
+                "UPDATE departments SET name = ?, description = ? WHERE id = ?",
+                (name, description, dept_id)
+            )
+            conn.commit()
+            updated = cursor.rowcount > 0
+            conn.close()
+            return updated
+        except Exception as e:
+            conn.close()
+            return False
+
+    def delete_department(self, dept_id: int) -> bool:
+        """Delete a department (only if no staff are assigned to it)"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            # Check if any staff are assigned to this department
+            cursor.execute("SELECT COUNT(*) FROM staff WHERE department_id = ?", (dept_id,))
+            staff_count = cursor.fetchone()[0]
+            
+            if staff_count > 0:
+                # Cannot delete department with assigned staff
+                conn.close()
+                return False
+            
+            cursor.execute("DELETE FROM departments WHERE id = ?", (dept_id,))
+            conn.commit()
+            deleted = cursor.rowcount > 0
+            conn.close()
+            return deleted
+        except Exception as e:
+            conn.close()
+            return False
+
+    def get_late_attendance_count_for_month(self, staff_id: str, year: int, month: int) -> int:
+        """Get the count of late attendance for a staff member in a specific month"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Define late arrival time (after 8:30 AM)
+        late_time = "08:30:00"
+        
+        # Format the date range for the specific month
+        start_date = f"{year:04d}-{month:02d}-01"
+        if month == 12:
+            end_date = f"{year+1:04d}-01-01"  # Next year, January
+        else:
+            end_date = f"{year:04d}-{month+1:02d}-01"  # Next month
+
+        query = """
+            SELECT COUNT(*) 
+            FROM attendance 
+            WHERE staff_id = ? 
+            AND date >= ? 
+            AND date < ? 
+            AND time_in > ? 
+            AND time_in IS NOT NULL
+        """
+        
+        cursor.execute(query, (staff_id, start_date, end_date, late_time))
+        late_count = cursor.fetchone()[0]
+        
+        conn.close()
+        return late_count
+
+    def get_staff_with_late_attendance(self, year: int, month: int, min_late_count: int = 1) -> List[tuple]:
+        """Get staff who were late more than a specified number of times in a month"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Define late arrival time (after 8:30 AM)
+        late_time = "08:30:00"
+        
+        # Format the date range for the specific month
+        start_date = f"{year:04d}-{month:02d}-01"
+        if month == 12:
+            end_date = f"{year+1:04d}-01-01"  # Next year, January
+        else:
+            end_date = f"{year:04d}-{month+1:02d}-01"  # Next month
+
+        # First, get the count of late arrivals by staff_id
+        query_count = """
+            SELECT 
+                staff_id,
+                COUNT(*) as late_count
+            FROM attendance 
+            WHERE date >= ? 
+            AND date < ? 
+            AND time_in > ? 
+            AND time_in IS NOT NULL
+            GROUP BY staff_id
+            HAVING late_count >= ?
+        """
+        
+        cursor.execute(query_count, (start_date, end_date, late_time, min_late_count))
+        late_counts = cursor.fetchall()
+        
+        results = []
+        for staff_id, late_count in late_counts:
+            # Get the most recent name and department for this staff member in this month
+            # (to show the current name rather than the name at each late arrival)
+            query_details = """
+                SELECT name, department
+                FROM attendance
+                WHERE staff_id = ? 
+                AND date >= ? 
+                AND date < ?
+                AND time_in IS NOT NULL
+                ORDER BY timestamp_in DESC
+                LIMIT 1
+            """
+            cursor.execute(query_details, (staff_id, start_date, end_date))
+            detail_row = cursor.fetchone()
+            
+            if detail_row:
+                name, department = detail_row
+            else:
+                # Fallback: get name from staff table
+                staff_info = self.get_staff(staff_id)
+                if staff_info:
+                    name, department = staff_info[1], staff_info[2]
+                else:
+                    name, department = "Unknown", "Unknown"
+            
+            results.append((staff_id, name, department, late_count))
+        
+        # Sort results by late count descending, then by name
+        results.sort(key=lambda x: (-x[3], x[1]))
+        
+        conn.close()
+        return results
+
+    def get_late_attendance_details(self, staff_id: str, year: int, month: int) -> List[tuple]:
+        """Get detailed late attendance records for a specific staff member in a month"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Define late arrival time (after 8:30 AM)
+        late_time = "08:30:00"
+        
+        # Format the date range for the specific month
+        start_date = f"{year:04d}-{month:02d}-01"
+        if month == 12:
+            end_date = f"{year+1:04d}-01-01"  # Next year, January
+        else:
+            end_date = f"{year:04d}-{month+1:02d}-01"  # Next month
+
+        query = """
+            SELECT 
+                staff_id, 
+                name, 
+                department, 
+                date, 
+                time_in,
+                CASE 
+                    WHEN time_in > '08:30:00' THEN 
+                        (strftime('%s', time_in) - strftime('%s', '08:30:00')) / 60 
+                    ELSE 0 
+                END as minutes_late
+            FROM attendance 
+            WHERE staff_id = ? 
+            AND date >= ? 
+            AND date < ? 
+            AND time_in > ? 
+            AND time_in IS NOT NULL
+            ORDER BY date, time_in
+        """
+        
+        cursor.execute(query, (staff_id, start_date, end_date, late_time))
+        results = cursor.fetchall()
+        
+        conn.close()
+        return results
+
     def delete_staff(self, staff_id: str) -> bool:
         """Delete a staff member (attendance records remain for audit purposes)"""
         conn = sqlite3.connect(self.db_path)

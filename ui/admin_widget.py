@@ -5,11 +5,12 @@ Admin widget for managing staff and viewing attendance
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QPushButton, QLineEdit, QTableWidget, 
-    QTableWidgetItem, QTabWidget, QFormLayout, QGroupBox, QHeaderView, QFileDialog, QDialog, QMessageBox
+    QTableWidgetItem, QTabWidget, QFormLayout, QGroupBox, QHeaderView, QFileDialog, QDialog, QMessageBox, QDateEdit
 )
 from PySide6.QtCore import Qt
 from database import DatabaseManager
 import csv
+import sqlite3
 
 
 class AdminWidget(QWidget):
@@ -49,6 +50,10 @@ class AdminWidget(QWidget):
         staff_tab = self.create_staff_tab()
         tab_widget.addTab(staff_tab, "Manage Staff")
         
+        # Departments tab
+        dept_tab = self.create_departments_tab()
+        tab_widget.addTab(dept_tab, "Manage Departments")
+        
         # Staff records tab
         staff_records_tab = self.create_staff_records_tab()
         tab_widget.addTab(staff_records_tab, "Staff Records")
@@ -56,6 +61,11 @@ class AdminWidget(QWidget):
         # Attendance records tab
         attendance_tab = self.create_attendance_tab()
         tab_widget.addTab(attendance_tab, "Attendance Records")
+        
+        # Lateness Report tab
+        from ui.lateness_report_widget import LatenessReportWidget
+        lateness_report_tab = LatenessReportWidget()
+        tab_widget.addTab(lateness_report_tab, "Lateness Report")
         
         # Export tab
         export_tab = self.create_export_tab()
@@ -115,23 +125,36 @@ class AdminWidget(QWidget):
                 border: 2px solid #1E3A8A;  /* Dark blue */
             }
         """)
-        self.staff_department_input = QLineEdit()
-        self.staff_department_input.setStyleSheet("""
-            QLineEdit {
+        from PySide6.QtWidgets import QComboBox
+        self.staff_department_combo = QComboBox()
+        self.staff_department_combo.setStyleSheet("""
+            QComboBox {
                 padding: 8px;
                 border: 1px solid #3B82F6;  /* Light blue */
                 border-radius: 4px;
                 color: #0F172A;  /* Dark blue-gray for better contrast */
                 background-color: white;
             }
-            QLineEdit:focus {
+            QComboBox:focus {
                 border: 2px solid #1E3A8A;  /* Dark blue */
             }
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 25px;
+                border-left: 1px solid #3B82F6;
+            }
+            QComboBox::down-arrow {
+                image: url(noimg);
+                width: 10px;
+                height: 10px;
+            }
         """)
+        self.update_department_combo()  # Load departments into the combobox
         
         form_layout.addRow("Full Name:", self.staff_name_input)
         form_layout.addRow("Staff ID:", self.staff_id_input)
-        form_layout.addRow("Department:", self.staff_department_input)
+        form_layout.addRow("Department:", self.staff_department_combo)
         
         register_button = QPushButton("Register Staff")
         register_button.clicked.connect(self.register_staff)
@@ -360,17 +383,237 @@ class AdminWidget(QWidget):
         tab.setLayout(layout)
         return tab
     
+    def create_departments_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout()
+        
+        # Department management form
+        form_group = QGroupBox("Add New Department")
+        form_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                border: 2px solid #1E3A8A;  /* Dark blue */
+                border-radius: 5px;
+                margin: 10px 0px;
+                padding-top: 15px;
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top center;
+                padding: 0 5px;
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+                font-weight: bold;
+            }
+        """)
+        form_layout = QFormLayout()
+        
+        self.dept_name_input = QLineEdit()
+        self.dept_name_input.setPlaceholderText("Department name")
+        self.dept_name_input.setStyleSheet("""
+            QLineEdit {
+                padding: 8px;
+                border: 1px solid #3B82F6;  /* Light blue */
+                border-radius: 4px;
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+                background-color: white;
+            }
+            QLineEdit:focus {
+                border: 2px solid #1E3A8A;  /* Dark blue */
+            }
+        """)
+        
+        self.dept_description_input = QLineEdit()
+        self.dept_description_input.setPlaceholderText("Description (optional)")
+        self.dept_description_input.setStyleSheet("""
+            QLineEdit {
+                padding: 8px;
+                border: 1px solid #3B82F6;  /* Light blue */
+                border-radius: 4px;
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+                background-color: white;
+            }
+            QLineEdit:focus {
+                border: 2px solid #1E3A8A;  /* Dark blue */
+            }
+        """)
+        
+        form_layout.addRow("Department Name:", self.dept_name_input)
+        form_layout.addRow("Description:", self.dept_description_input)
+        
+        add_dept_button = QPushButton("Add Department")
+        add_dept_button.clicked.connect(self.add_department)
+        add_dept_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3B82F6;  /* Light blue */
+                color: white;
+                border: none;
+                padding: 8px;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #2563EB;  /* Medium blue */
+            }
+            QPushButton:pressed {
+                background-color: #1D4ED8;  /* Darker blue */
+            }
+        """)
+        form_layout.addRow(add_dept_button)
+        
+        form_group.setLayout(form_layout)
+        layout.addWidget(form_group)
+        
+        # Table to display departments
+        self.dept_table = QTableWidget()
+        self.dept_table.setColumnCount(4)  # ID, Name, Description, Actions
+        self.dept_table.setHorizontalHeaderLabels(["ID", "Name", "Description", "Actions"])
+        self.dept_table.setStyleSheet("""
+            QTableWidget {
+                border: 1px solid #3B82F6;  /* Light blue */
+                alternate-background-color: #F0F9FF;  /* Very light blue */
+                selection-background-color: #BAE6FD;  /* Lighter blue for selected items */
+            }
+            QHeaderView::section {
+                background-color: #1E3A8A;  /* Dark blue */
+                color: white;
+                padding: 4px;
+                border: 1px solid #3B82F6;  /* Light blue */
+            }
+        """)
+        
+        # Department table sizing
+        header = self.dept_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # ID column - resize to fit
+        header.setSectionResizeMode(1, QHeaderView.Stretch)  # Name column - stretch to fill
+        header.setSectionResizeMode(2, QHeaderView.Stretch)  # Description column - stretch to fill
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)  # Actions column - resize to fit
+        
+        layout.addWidget(QLabel("Departments"))
+        layout.addWidget(self.dept_table)
+        
+        # Refresh button
+        refresh_dept_button = QPushButton("Refresh Departments")
+        refresh_dept_button.clicked.connect(self.refresh_departments)
+        refresh_dept_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3B82F6;  /* Light blue */
+                color: white;
+                border: none;
+                padding: 8px;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #2563EB;  /* Medium blue */
+            }
+            QPushButton:pressed {
+                background-color: #1D4ED8;  /* Darker blue */
+            }
+        """)
+        layout.addWidget(refresh_dept_button)
+        
+        # Load existing departments
+        self.refresh_departments()
+        
+        tab.setLayout(layout)
+        return tab
+    
+    def update_department_combo(self):
+        """Update the department combobox with all available departments"""
+        # Clear current items
+        self.staff_department_combo.clear()
+        
+        # Get all departments from the database
+        departments = self.db.get_all_departments()
+        
+        # Add departments to the combobox
+        for dept_id, dept_name, description in departments:
+            self.staff_department_combo.addItem(dept_name, dept_id)
+        
+        # Add an option to create a new department
+        self.staff_department_combo.addItem("Add New Department...", -1)
+
     def register_staff(self):
         name = self.staff_name_input.text()
         staff_id = self.staff_id_input.text()
-        department = self.staff_department_input.text()
+        
+        # Get the selected department name from the combobox
+        current_index = self.staff_department_combo.currentIndex()
+        selected_data = self.staff_department_combo.itemData(current_index)
+        
+        # Check if "Add New Department..." was selected
+        if selected_data == -1:
+            # Open dialog to add a new department
+            from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Add New Department")
+            dialog.setModal(True)
+            dialog.resize(300, 150)
+
+            layout = QVBoxLayout()
+
+            label = QLabel("Enter department name:")
+            label.setAlignment(Qt.AlignCenter)
+            layout.addWidget(label)
+
+            dept_input = QLineEdit()
+            dept_input.setPlaceholderText("Department name")
+            layout.addWidget(dept_input)
+
+            button_layout = QHBoxLayout()
+
+            ok_button = QPushButton("Add Department")
+            ok_button.clicked.connect(dialog.accept)
+
+            cancel_button = QPushButton("Cancel")
+            cancel_button.clicked.connect(dialog.reject)
+
+            button_layout.addWidget(ok_button)
+            button_layout.addWidget(cancel_button)
+
+            layout.addLayout(button_layout)
+
+            dialog.setLayout(layout)
+
+            if dialog.exec() == QDialog.Accepted:
+                new_department = dept_input.text().strip()
+                if new_department:
+                    # Add the new department
+                    success = self.db.add_department(new_department)
+                    if success:
+                        # Update the combobox with the new department
+                        self.update_department_combo()
+                        
+                        # Find and select the new department in the combobox
+                        index = self.staff_department_combo.findText(new_department)
+                        if index != -1:
+                            self.staff_department_combo.setCurrentIndex(index)
+                            department = new_department
+                        else:
+                            department = new_department
+                    else:
+                        QMessageBox.warning(self, "Error", f"Department '{new_department}' already exists!")
+                        return
+                else:
+                    QMessageBox.warning(self, "Input Error", "Department name cannot be empty!")
+                    return
+            else:
+                # User cancelled, return early
+                return
+        
+        # Get the selected department name
+        department = self.staff_department_combo.currentText()
+        
+        if department == "Add New Department...":
+            return  # User cancelled adding a new department
         
         if name and staff_id and department:
             success = self.db.add_staff(staff_id, name, department)
             if success:
                 self.staff_name_input.clear()
-                self.staff_id_input.clear()
-                self.staff_department_input.clear()
+                # Update the combobox to reflect any new departments
+                self.update_department_combo()
                 
                 from PySide6.QtWidgets import QMessageBox
                 QMessageBox.information(self, "Registration", f"Staff {name} registered successfully!")
@@ -407,9 +650,10 @@ class AdminWidget(QWidget):
             self.staff_table.insertRow(row_idx)
             # Insert the basic data (Staff ID, Name, Department)
             for col_idx, data in enumerate(record):
-                item = QTableWidgetItem(str(data))
-                item.setTextAlignment(Qt.AlignCenter)  # Center the text
-                self.staff_table.setItem(row_idx, col_idx, item)
+                if col_idx < 3:  # Only for the visible columns (ID, Name, Department)
+                    item = QTableWidgetItem(str(data))
+                    item.setTextAlignment(Qt.AlignCenter)  # Center the text
+                    self.staff_table.setItem(row_idx, col_idx, item)
             
             # Add Edit button
             edit_button = QPushButton("Edit")
@@ -460,18 +704,41 @@ class AdminWidget(QWidget):
         current_department = self.staff_table.item(row, 2).text()
         
         # Create dialog for editing
+        from PySide6.QtWidgets import QDialog
         dialog = QDialog(self)
         dialog.setWindowTitle("Edit Staff Member")
         dialog.setModal(True)
         dialog.resize(300, 150)
         
+        from PySide6.QtWidgets import QFormLayout, QLineEdit, QComboBox, QHBoxLayout, QPushButton, QLabel, QVBoxLayout, QMessageBox
         layout = QFormLayout()
         
         name_input = QLineEdit(current_name)
-        department_input = QLineEdit(current_department)
+        
+        # Create department combobox for editing
+        department_combo = QComboBox()
+        
+        # Get all departments from the database
+        departments = self.db.get_all_departments()
+        
+        # Add departments to the combobox
+        for dept_id, dept_name, description in departments:
+            department_combo.addItem(dept_name, dept_id)
+        
+        # Add an option to create a new department
+        department_combo.addItem("Add New Department...", -1)
+        
+        # Set the current department as selected
+        current_index = department_combo.findText(current_department)
+        if current_index != -1:
+            department_combo.setCurrentIndex(current_index)
+        else:
+            # If department doesn't exist in the list, add it temporarily
+            department_combo.insertItem(0, current_department)
+            department_combo.setCurrentIndex(0)
         
         layout.addRow("Name:", name_input)
-        layout.addRow("Department:", department_input)
+        layout.addRow("Department:", department_combo)
         
         button_layout = QHBoxLayout()
         
@@ -490,23 +757,467 @@ class AdminWidget(QWidget):
         
         if dialog.exec() == QDialog.Accepted:
             new_name = name_input.text()
-            new_department = department_input.text()
             
-            if new_name and new_department:
+            # Get the selected department name from the combobox
+            current_index = department_combo.currentIndex()
+            selected_data = department_combo.itemData(current_index)
+            
+            # Check if "Add New Department..." was selected
+            if selected_data == -1:
+                # Open dialog to add a new department
+                dept_dialog = QDialog(self)
+                dept_dialog.setWindowTitle("Add New Department")
+                dept_dialog.setModal(True)
+                dept_dialog.resize(300, 150)
+
+                dept_layout = QVBoxLayout()
+
+                dept_label = QLabel("Enter department name:")
+                dept_label.setAlignment(Qt.AlignCenter)
+                dept_layout.addWidget(dept_label)
+
+                new_dept_input = QLineEdit()
+                new_dept_input.setPlaceholderText("Department name")
+                dept_layout.addWidget(new_dept_input)
+
+                dept_button_layout = QHBoxLayout()
+
+                dept_ok_button = QPushButton("Add Department")
+                dept_ok_button.clicked.connect(dept_dialog.accept)
+
+                dept_cancel_button = QPushButton("Cancel")
+                dept_cancel_button.clicked.connect(dept_dialog.reject)
+
+                dept_button_layout.addWidget(dept_ok_button)
+                dept_button_layout.addWidget(dept_cancel_button)
+
+                dept_layout.addLayout(dept_button_layout)
+
+                dept_dialog.setLayout(dept_layout)
+
+                if dept_dialog.exec() == QDialog.Accepted:
+                    new_department = new_dept_input.text().strip()
+                    if new_department:
+                        # Add the new department
+                        success = self.db.add_department(new_department)
+                        if success:
+                            new_dept = new_department
+                        else:
+                            QMessageBox.warning(self, "Error", f"Department '{new_department}' already exists!")
+                            return
+                    else:
+                        QMessageBox.warning(self, "Input Error", "Department name cannot be empty!")
+                        return
+                else:
+                    # User cancelled, return early
+                    return
+            else:
+                new_dept = department_combo.currentText()
+            
+            if new_name and new_dept:
                 # Update the staff member in the database
-                success = self.db.update_staff(staff_id, new_name, new_department)
+                success = self.db.update_staff(staff_id, new_name, new_dept)
                 
                 if success:
-                    # Update the table display
-                    self.staff_table.item(row, 1).setText(new_name)
-                    self.staff_table.item(row, 2).setText(new_department)
+                    # Refresh the entire staff table to ensure consistency
+                    self.refresh_staff()
                     QMessageBox.information(self, "Success", "Staff member updated successfully!")
                 else:
                     QMessageBox.critical(self, "Error", "Failed to update staff member.")
             else:
                 QMessageBox.warning(self, "Input Error", "Please fill in all fields.")
     
+    def add_department(self):
+        """Add a new department"""
+        name = self.dept_name_input.text().strip()
+        description = self.dept_description_input.text().strip()
+        
+        if not name:
+            QMessageBox.warning(self, "Input Error", "Department name cannot be empty!")
+            return
+            
+        # Check if department already exists
+        existing_depts = self.db.get_all_departments()
+        for dept_id, dept_name, dept_desc in existing_depts:
+            if dept_name.lower() == name.lower():
+                QMessageBox.warning(self, "Error", f"Department '{name}' already exists!")
+                return
+        
+        success = self.db.add_department(name, description)
+        if success:
+            self.dept_name_input.clear()
+            self.dept_description_input.clear()
+            
+            # Refresh the department list and combobox
+            self.refresh_departments()
+            self.update_department_combo()
+            
+            QMessageBox.information(self, "Success", f"Department '{name}' added successfully!")
+        else:
+            QMessageBox.warning(self, "Error", f"Department '{name}' already exists!")
+    
+    def refresh_departments(self):
+        """Refresh the departments table"""
+        # Clear existing data
+        self.dept_table.setRowCount(0)
+        
+        # Get all departments from the database
+        departments = self.db.get_all_departments()
+        
+        for row_idx, (dept_id, dept_name, dept_description) in enumerate(departments):
+            self.dept_table.insertRow(row_idx)
+            
+            # Add department ID
+            id_item = QTableWidgetItem(str(dept_id))
+            id_item.setTextAlignment(Qt.AlignCenter)
+            self.dept_table.setItem(row_idx, 0, id_item)
+            
+            # Add department name
+            name_item = QTableWidgetItem(dept_name)
+            name_item.setTextAlignment(Qt.AlignCenter)
+            self.dept_table.setItem(row_idx, 1, name_item)
+            
+            # Add department description
+            desc_item = QTableWidgetItem(dept_description if dept_description else "")
+            desc_item.setTextAlignment(Qt.AlignCenter)
+            self.dept_table.setItem(row_idx, 2, desc_item)
+            
+            # Add action buttons
+            actions_widget = QWidget()
+            actions_layout = QHBoxLayout(actions_widget)
+            actions_layout.setAlignment(Qt.AlignCenter)
+            actions_layout.setContentsMargins(0, 0, 0, 0)
+            
+            # Edit button
+            edit_btn = QPushButton("Edit")
+            edit_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #10B981;  /* Green */
+                    color: white;
+                    border: none;
+                    padding: 4px 8px;
+                    border-radius: 3px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #059669;  /* Darker Green */
+                }
+            """)
+            edit_btn.clicked.connect(lambda _, id=dept_id: self.edit_department(id))
+            actions_layout.addWidget(edit_btn)
+            
+            # Delete button
+            delete_btn = QPushButton("Delete")
+            delete_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #EF4444;  /* Red */
+                    color: white;
+                    border: none;
+                    padding: 4px 8px;
+                    border-radius: 3px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #DC2626;  /* Darker Red */
+                }
+            """)
+            delete_btn.clicked.connect(lambda _, id=dept_id: self.delete_department(id))
+            actions_layout.addWidget(delete_btn)
+            
+            # Add the actions widget to the table
+            self.dept_table.setCellWidget(row_idx, 3, actions_widget)
+    
+    def edit_department(self, dept_id):
+        """Edit an existing department"""
+        # Get current department info
+        dept_info = self.db.get_department_by_id(dept_id)
+        if not dept_info:
+            QMessageBox.critical(self, "Error", "Department not found!")
+            return
+        
+        dept_id, current_name, current_description = dept_info
+        
+        # Create dialog for editing
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Edit Department")
+        dialog.setModal(True)
+        dialog.resize(300, 150)
+        
+        layout = QFormLayout()
+        
+        name_input = QLineEdit(current_name)
+        description_input = QLineEdit(current_description if current_description else "")
+        
+        layout.addRow("Department Name:", name_input)
+        layout.addRow("Description:", description_input)
+        
+        button_layout = QHBoxLayout()
+        
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(dialog.accept)
+        
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(dialog.reject)
+        
+        button_layout.addWidget(save_button)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addRow(button_layout)
+        
+        dialog.setLayout(layout)
+        
+        if dialog.exec() == QDialog.Accepted:
+            new_name = name_input.text().strip()
+            new_description = description_input.text().strip()
+            
+            if not new_name:
+                QMessageBox.warning(self, "Input Error", "Department name cannot be empty!")
+                return
+            
+            # Check if department name already exists (excluding this department)
+            existing_depts = self.db.get_all_departments()
+            for existing_id, existing_name, _ in existing_depts:
+                if existing_name.lower() == new_name.lower() and existing_id != dept_id:
+                    QMessageBox.warning(self, "Error", f"Department '{new_name}' already exists!")
+                    return
+            
+            success = self.db.update_department(dept_id, new_name, new_description)
+            if success:
+                # Refresh the department list and combobox
+                self.refresh_departments()
+                self.update_department_combo()
+                
+                QMessageBox.information(self, "Success", "Department updated successfully!")
+            else:
+                QMessageBox.critical(self, "Error", "Failed to update department.")
+    
+    def delete_department(self, dept_id):
+        """Delete a department"""
+        # Get department info to show in confirmation
+        dept_info = self.db.get_department_by_id(dept_id)
+        if not dept_info:
+            QMessageBox.critical(self, "Error", "Department not found!")
+            return
+        
+        dept_id, dept_name, dept_description = dept_info
+        
+        # Check if any staff are assigned to this department
+        conn = sqlite3.connect("attendance.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM staff WHERE department_id = ?", (dept_id,))
+        staff_count = cursor.fetchone()[0]
+        conn.close()
+        
+        if staff_count > 0:
+            QMessageBox.critical(
+                self, 
+                "Cannot Delete", 
+                f"Cannot delete department '{dept_name}' because {staff_count} staff member(s) are assigned to it.\n"
+                f"Please reassign these staff members to other departments first."
+            )
+            return
+        
+        # Confirm deletion
+        reply = QMessageBox.question(
+            self,
+            "Confirm Deletion",
+            f"Are you sure you want to delete department '{dept_name}'?\n"
+            f"This action cannot be undone.",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            success = self.db.delete_department(dept_id)
+            if success:
+                # Refresh the department list and combobox
+                self.refresh_departments()
+                self.update_department_combo()
+                
+                QMessageBox.information(self, "Success", f"Department '{dept_name}' deleted successfully!")
+            else:
+                QMessageBox.critical(self, "Error", "Failed to delete department.")
+
+    def edit_staff_by_id(self, staff_id: str):
+        """Edit staff by directly using ID instead of row index"""
+        # Get current values from the database
+        staff_info = self.db.get_staff(staff_id)
+        if not staff_info:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Error", "Staff member not found!")
+            return
+
+        current_name = staff_info[1]
+        current_department = staff_info[2]
+        
+        # Create dialog for editing
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Edit Staff Member")
+        dialog.setModal(True)
+        dialog.resize(300, 150)
+        
+        layout = QFormLayout()
+        
+        name_input = QLineEdit(current_name)
+        
+        # Create department combobox for editing
+        from PySide6.QtWidgets import QComboBox
+        department_combo = QComboBox()
+
+        # Get all departments from the database
+        departments = self.db.get_all_departments()
+
+        # Add departments to the combobox
+        for dept_id, dept_name, description in departments:
+            department_combo.addItem(dept_name, dept_id)
+
+        # Add an option to create a new department
+        department_combo.addItem("Add New Department...", -1)
+
+        # Set the current department as selected
+        current_index = department_combo.findText(current_department)
+        if current_index != -1:
+            department_combo.setCurrentIndex(current_index)
+        else:
+            # If department doesn't exist in the list, add it temporarily
+            department_combo.insertItem(0, current_department)
+            department_combo.setCurrentIndex(0)
+
+        layout.addRow("Name:", name_input)
+        layout.addRow("Department:", department_combo)
+
+        button_layout = QHBoxLayout()
+
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(dialog.accept)
+
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(dialog.reject)
+
+        button_layout.addWidget(save_button)
+        button_layout.addWidget(cancel_button)
+
+        layout.addRow(button_layout)
+
+        dialog.setLayout(layout)
+
+        if dialog.exec() == QDialog.Accepted:
+            new_name = name_input.text()
+
+            # Get the selected department name from the combobox
+            current_index = department_combo.currentIndex()
+            selected_data = department_combo.itemData(current_index)
+
+            # Check if "Add New Department..." was selected
+            if selected_data == -1:
+                # Open dialog to add a new department
+                from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
+                dept_dialog = QDialog(self)
+                dept_dialog.setWindowTitle("Add New Department")
+                dept_dialog.setModal(True)
+                dept_dialog.resize(300, 150)
+
+                dept_layout = QVBoxLayout()
+
+                dept_label = QLabel("Enter department name:")
+                dept_label.setAlignment(Qt.AlignCenter)
+                dept_layout.addWidget(dept_label)
+
+                new_dept_input = QLineEdit()
+                new_dept_input.setPlaceholderText("Department name")
+                dept_layout.addWidget(new_dept_input)
+
+                dept_button_layout = QHBoxLayout()
+
+                dept_ok_button = QPushButton("Add Department")
+                dept_ok_button.clicked.connect(dept_dialog.accept)
+
+                dept_cancel_button = QPushButton("Cancel")
+                dept_cancel_button.clicked.connect(dept_dialog.reject)
+
+                dept_button_layout.addWidget(dept_ok_button)
+                dept_button_layout.addWidget(dept_cancel_button)
+
+                dept_layout.addLayout(dept_button_layout)
+
+                dept_dialog.setLayout(dept_layout)
+
+                if dept_dialog.exec() == QDialog.Accepted:
+                    new_department = new_dept_input.text().strip()
+                    if new_department:
+                        # Add the new department
+                        success = self.db.add_department(new_department)
+                        if success:
+                            new_dept = new_department
+                        else:
+                            QMessageBox.warning(self, "Error", f"Department '{new_department}' already exists!")
+                            return
+                    else:
+                        QMessageBox.warning(self, "Input Error", "Department name cannot be empty!")
+                        return
+                else:
+                    # User cancelled, return early
+                    return
+            else:
+                new_dept = department_combo.currentText()
+
+            if new_name and new_dept:
+                # Update the staff member in the database
+                success = self.db.update_staff(staff_id, new_name, new_dept)
+
+                if success:
+                    # Refresh the staff table to show updated information
+                    self.refresh_staff()
+                    # Refresh the department combo in the main form too
+                    self.update_department_combo()
+                    QMessageBox.information(self, "Success", "Staff member updated successfully!")
+                else:
+                    QMessageBox.critical(self, "Error", "Failed to update staff member.")
+            else:
+                QMessageBox.warning(self, "Input Error", "Please fill in all fields.")
+
+    def delete_staff_by_id(self, staff_id: str) -> bool:
+        """Delete staff by directly using ID"""
+        # Get staff info to show in confirmation
+        staff_info = self.db.get_staff(staff_id)
+        if not staff_info:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Error", "Staff member not found!")
+            return False
+
+        staff_name = staff_info[1]
+        
+        # Confirm deletion with message about data retention
+        reply = QMessageBox.question(
+            self,
+            "Confirm Deletion",
+            f"Are you sure you want to delete {staff_name} (ID: {staff_id})?\n\n"
+            f"Their attendance records will be retained for audit purposes, "
+            f"but they will no longer be able to log attendance.",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            # Delete the staff member from the database
+            success = self.db.delete_staff(staff_id)
+            
+            if success:
+                # Refresh the staff table to show updated information
+                self.refresh_staff()
+                # Refresh the department combo in the main form too
+                self.update_department_combo()
+                QMessageBox.information(self, "Success", 
+                    f"{staff_name} has been removed from staff list.\n"
+                    f"Their attendance records will remain for audit purposes.")
+                return True
+            else:
+                QMessageBox.critical(self, "Error", "Failed to delete staff member.")
+                return False
+        return False
+    
     def delete_staff(self, row):
+        # Import here to ensure availability
+        from PySide6.QtWidgets import QMessageBox
+        
         # Get the staff ID from the hidden column
         staff_id = self.staff_table.item(row, 5).text()
         staff_name = self.staff_table.item(row, 1).text()
@@ -526,8 +1237,10 @@ class AdminWidget(QWidget):
             success = self.db.delete_staff(staff_id)
             
             if success:
-                # Remove the row from the table
-                self.staff_table.removeRow(row)
+                # Refresh the entire staff table to ensure consistency
+                self.refresh_staff()
+                # Refresh the department combo in the main form too
+                self.update_department_combo()
                 QMessageBox.information(self, "Success", 
                     f"{staff_name} has been removed from staff list.\n"
                     f"Their attendance records will remain for audit purposes.")
