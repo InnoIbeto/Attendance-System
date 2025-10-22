@@ -183,37 +183,112 @@ class DatabaseManager:
         conn.close()
         return count
     
-    def get_all_attendance(self) -> List[tuple]:
-        """Get all attendance records"""
+    def get_all_attendance(self, limit: int = None, offset: int = 0, date_from: str = None, date_to: str = None, department: str = None, staff_id: str = None) -> List[tuple]:
+        """Get all attendance records with optional filters and pagination"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        cursor.execute('''
+        # Build the query with optional filters
+        query = """
             SELECT a.staff_id, a.name, a.department, a.date, a.time_in, a.time_out
             FROM attendance a
-            ORDER BY a.timestamp_in DESC
-        ''')
+            WHERE 1=1
+        """
+        params = []
+        
+        if date_from:
+            query += " AND a.date >= ?"
+            params.append(date_from)
+        
+        if date_to:
+            query += " AND a.date <= ?"
+            params.append(date_to)
+            
+        if department:
+            query += " AND a.department = ?"
+            params.append(department)
+            
+        if staff_id:
+            query += " AND a.staff_id = ?"
+            params.append(staff_id)
+        
+        query += " ORDER BY a.timestamp_in DESC"
+        
+        if limit is not None:
+            query += " LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
+        
+        cursor.execute(query, params)
         results = cursor.fetchall()
         
         conn.close()
         return results
     
-    def get_all_staff(self) -> List[tuple]:
+    def get_total_attendance_count(self, date_from: str = None, date_to: str = None, department: str = None, staff_id: str = None) -> int:
+        """Get the total count of attendance records for pagination with filters"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Build the count query with optional filters
+        query = "SELECT COUNT(*) FROM attendance a WHERE 1=1"
+        params = []
+        
+        if date_from:
+            query += " AND a.date >= ?"
+            params.append(date_from)
+        
+        if date_to:
+            query += " AND a.date <= ?"
+            params.append(date_to)
+            
+        if department:
+            query += " AND a.department = ?"
+            params.append(department)
+            
+        if staff_id:
+            query += " AND a.staff_id = ?"
+            params.append(staff_id)
+        
+        cursor.execute(query, params)
+        count = cursor.fetchone()[0]
+        
+        conn.close()
+        return count
+    
+    def get_all_staff(self, limit: int = None, offset: int = 0) -> List[tuple]:
         """Get all staff members - updated to work with department_id"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
         # Join staff with departments to get department name
-        cursor.execute("""
+        query = """
             SELECT s.staff_id, s.name, d.name 
             FROM staff s
             JOIN departments d ON s.department_id = d.id
             ORDER BY s.name
-        """)
+        """
+        
+        if limit is not None:
+            query += " LIMIT ? OFFSET ?"
+            cursor.execute(query, (limit, offset))
+        else:
+            cursor.execute(query)
+        
         results = cursor.fetchall()
         
         conn.close()
         return results
+    
+    def get_total_staff_count(self) -> int:
+        """Get the total count of staff members for pagination"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(*) FROM staff")
+        count = cursor.fetchone()[0]
+        
+        conn.close()
+        return count
     
     def update_staff(self, staff_id: str, name: str, department: str) -> bool:
         """Update staff information - updated to work with department name"""
@@ -284,16 +359,34 @@ class DatabaseManager:
         conn.close()
         return result
 
-    def get_all_departments(self) -> List[tuple]:
-        """Get all departments"""
+    def get_all_departments(self, limit: int = None, offset: int = 0) -> List[tuple]:
+        """Get all departments with pagination support"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        cursor.execute("SELECT id, name, description FROM departments ORDER BY name")
+        query = "SELECT id, name, description FROM departments ORDER BY name"
+        
+        if limit is not None:
+            query += " LIMIT ? OFFSET ?"
+            cursor.execute(query, (limit, offset))
+        else:
+            cursor.execute(query)
+        
         results = cursor.fetchall()
         
         conn.close()
         return results
+    
+    def get_total_departments_count(self) -> int:
+        """Get the total count of departments for pagination"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(*) FROM departments")
+        count = cursor.fetchone()[0]
+        
+        conn.close()
+        return count
 
     def update_department(self, dept_id: int, name: str, description: str = "") -> bool:
         """Update department information"""

@@ -159,10 +159,90 @@ class LatenessReportWidget(QWidget):
         layout.addWidget(QLabel("Lateness Report Results"))
         layout.addWidget(self.results_table)
         
+        # Pagination controls for lateness report
+        pagination_layout = QHBoxLayout()
+        
+        self.late_page_label = QLabel("Page 1 of 1")
+        self.late_page_label.setStyleSheet("color: #0F172A; font-weight: bold; margin: 5px;")
+        pagination_layout.addWidget(self.late_page_label)
+        
+        pagination_layout.addStretch()
+        
+        self.late_prev_button = QPushButton("Previous")
+        self.late_prev_button.clicked.connect(lambda: self.change_late_page(-1))
+        self.late_prev_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3B82F6;
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 5px;
+                font-weight: bold;
+                margin: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2563EB;
+            }
+            QPushButton:pressed {
+                background-color: #1D4ED8;
+            }
+        """)
+        self.late_prev_button.setEnabled(False)  # Disabled initially
+        pagination_layout.addWidget(self.late_prev_button)
+        
+        self.late_page_input = QLineEdit("1")
+        self.late_page_input.setMaximumWidth(50)
+        self.late_page_input.returnPressed.connect(self.goto_late_page)
+        self.late_page_input.setStyleSheet("""
+            QLineEdit {
+                padding: 6px;
+                border: 1px solid #3B82F6;
+                border-radius: 4px;
+                color: #0F172A;
+                background-color: white;
+                text-align: center;
+            }
+            QLineEdit:focus {
+                border: 2px solid #1E3A8A;
+            }
+        """)
+        pagination_layout.addWidget(QLabel("Go to page:"))
+        pagination_layout.addWidget(self.late_page_input)
+        
+        self.late_next_button = QPushButton("Next")
+        self.late_next_button.clicked.connect(lambda: self.change_late_page(1))
+        self.late_next_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3B82F6;
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 5px;
+                font-weight: bold;
+                margin: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2563EB;
+            }
+            QPushButton:pressed {
+                background-color: #1D4ED8;
+            }
+        """)
+        self.late_next_button.setEnabled(False)  # Disabled initially
+        pagination_layout.addWidget(self.late_next_button)
+        
+        # Initialize pagination variables
+        self.late_current_page = 1
+        self.late_items_per_page = 20  # Show 20 late staff members per page
+        self.late_total_items = 0
+        self.late_total_pages = 1
+        
+        layout.addLayout(pagination_layout)
+        
         self.setLayout(layout)
     
     def generate_report(self):
-        """Generate the lateness report based on selected parameters"""
+        """Generate the lateness report based on selected parameters with pagination"""
         try:
             # Get selected month and year
             selected_date = self.month_selector.date()
@@ -178,8 +258,24 @@ class LatenessReportWidget(QWidget):
                 min_late_count = 1
                 self.min_late_input.setText("1")
             
-            # Get the lateness data from database
-            late_staff = self.db.get_staff_with_late_attendance(year, month, min_late_count)
+            # Calculate offset for pagination
+            offset = (self.late_current_page - 1) * self.late_items_per_page
+            
+            # Get the lateness data from database with pagination
+            late_staff = self.db.get_staff_with_late_attendance(year, month, min_late_count, 
+                                                                 limit=self.late_items_per_page, 
+                                                                 offset=offset)
+            
+            # Update total late staff count for pagination
+            self.late_total_items = self.db.get_total_late_attendance_count(year, month, min_late_count)
+            self.late_total_pages = max(1, (self.late_total_items + self.late_items_per_page - 1) // self.late_items_per_page)
+            
+            # Update the page label
+            self.late_page_label.setText(f"Page {self.late_current_page} of {self.late_total_pages}")
+            
+            # Update pagination button states
+            self.late_prev_button.setEnabled(self.late_current_page > 1)
+            self.late_next_button.setEnabled(self.late_current_page < self.late_total_pages)
             
             # Clear existing data in table
             self.results_table.setRowCount(0)
@@ -231,6 +327,30 @@ class LatenessReportWidget(QWidget):
                 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"An error occurred while generating the report: {str(e)}")
+    
+    def change_late_page(self, direction):
+        """Change the current page for lateness report"""
+        new_page = self.late_current_page + direction
+        
+        if 1 <= new_page <= self.late_total_pages:
+            self.late_current_page = new_page
+            self.generate_report()
+
+    def goto_late_page(self):
+        """Go to a specific page for lateness report"""
+        try:
+            page_num = int(self.late_page_input.text())
+            if 1 <= page_num <= self.late_total_pages:
+                self.late_current_page = page_num
+                self.generate_report()
+            else:
+                # Show error if page number is invalid
+                QMessageBox.warning(self, "Invalid Page", f"Please enter a page number between 1 and {self.late_total_pages}")
+                self.late_page_input.setText(str(self.late_current_page))  # Reset to current page
+        except ValueError:
+            # Show error if input is not a valid number
+            QMessageBox.warning(self, "Invalid Input", "Please enter a valid page number")
+            self.late_page_input.setText(str(self.late_current_page))  # Reset to current page
     
     def show_detailed_report(self, row, column):
         """Show detailed late attendance for the selected staff member"""

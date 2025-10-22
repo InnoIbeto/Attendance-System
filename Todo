@@ -98,7 +98,7 @@ From Mr. Ugo
 
 - Implement pagination for both Staff and Attendance tables and other necessary pages to improve data navigation.
 
-- Add filter options (e.g., date range, department, staff name) before exporting attendance data to CSV.
+- Add filter options (e.g., date range, department, staff name) before exporting attendance data to CSV. (personal note: look to add lateness filter too)
 
 From Mr. Ukpong
 
@@ -106,11 +106,11 @@ From Mr. Ukpong
 
 From Mr. Peter
 
-- taskk 1: Restructure the database to include a separate Departments table for scalability.
+- taskk 1: Restructure the database to include a separate Departments table for scalability. - COMPLETED
 
 - Link the Staff table to the Departments table using department_id.
 
-- Implement a query logic to identify staff who have been late:
+- Implement a query logic to identify staff who have been late: - COMPLETED
 
   * Once in a month, and
 

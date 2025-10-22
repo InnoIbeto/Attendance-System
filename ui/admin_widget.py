@@ -5,9 +5,9 @@ Admin widget for managing staff and viewing attendance
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QPushButton, QLineEdit, QTableWidget, 
-    QTableWidgetItem, QTabWidget, QFormLayout, QGroupBox, QHeaderView, QFileDialog, QDialog, QMessageBox, QDateEdit
+    QTableWidgetItem, QTabWidget, QFormLayout, QGroupBox, QHeaderView, QFileDialog, QDialog, QMessageBox, QDateEdit, QComboBox
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QDate
 from database import DatabaseManager
 import csv
 import sqlite3
@@ -216,6 +216,86 @@ class AdminWidget(QWidget):
         layout.addWidget(QLabel("Registered Staff"))
         layout.addWidget(self.staff_table)
         
+        # Pagination controls
+        pagination_layout = QHBoxLayout()
+        
+        self.staff_page_label = QLabel("Page 1 of 1")
+        self.staff_page_label.setStyleSheet("color: #0F172A; font-weight: bold; margin: 5px;")
+        pagination_layout.addWidget(self.staff_page_label)
+        
+        pagination_layout.addStretch()
+        
+        self.staff_prev_button = QPushButton("Previous")
+        self.staff_prev_button.clicked.connect(lambda: self.change_staff_page(-1))
+        self.staff_prev_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3B82F6;  /* Light blue */
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 5px;
+                font-weight: bold;
+                margin: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2563EB;  /* Medium blue */
+            }
+            QPushButton:pressed {
+                background-color: #1D4ED8;  /* Darker blue */
+            }
+        """)
+        self.staff_prev_button.setEnabled(False)  # Disabled initially
+        pagination_layout.addWidget(self.staff_prev_button)
+        
+        self.staff_page_input = QLineEdit("1")
+        self.staff_page_input.setMaximumWidth(50)
+        self.staff_page_input.returnPressed.connect(self.goto_staff_page)
+        self.staff_page_input.setStyleSheet("""
+            QLineEdit {
+                padding: 6px;
+                border: 1px solid #3B82F6;  /* Light blue */
+                border-radius: 4px;
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+                background-color: white;
+                text-align: center;
+            }
+            QLineEdit:focus {
+                border: 2px solid #1E3A8A;  /* Dark blue */
+            }
+        """)
+        pagination_layout.addWidget(QLabel("Go to page:"))
+        pagination_layout.addWidget(self.staff_page_input)
+        
+        self.staff_next_button = QPushButton("Next")
+        self.staff_next_button.clicked.connect(lambda: self.change_staff_page(1))
+        self.staff_next_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3B82F6;  /* Light blue */
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 5px;
+                font-weight: bold;
+                margin: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2563EB;  /* Medium blue */
+            }
+            QPushButton:pressed {
+                background-color: #1D4ED8;  /* Darker blue */
+            }
+        """)
+        self.staff_next_button.setEnabled(False)  # Disabled initially
+        pagination_layout.addWidget(self.staff_next_button)
+        
+        # Initialize pagination variables
+        self.staff_current_page = 1
+        self.staff_items_per_page = 20  # Show 20 staff members per page
+        self.staff_total_items = 0
+        self.staff_total_pages = 1
+        
+        layout.addLayout(pagination_layout)
+        
         refresh_staff_button = QPushButton("Refresh Staff")
         refresh_staff_button.clicked.connect(self.refresh_staff)
         refresh_staff_button.setStyleSheet("""
@@ -274,6 +354,228 @@ class AdminWidget(QWidget):
         layout.addWidget(QLabel("Attendance Records"))
         layout.addWidget(self.attendance_table)
         
+        # Filter controls
+        filter_layout = QHBoxLayout()
+        
+        # Date range filters
+        date_from_label = QLabel("From Date:")
+        date_from_label.setStyleSheet("color: #0F172A; font-weight: bold;")
+        self.attendance_date_from = QDateEdit()
+        from PySide6.QtCore import QDate
+        self.attendance_date_from.setDate(QDate.currentDate().addMonths(-1))  # Default to last month
+        self.attendance_date_from.setDisplayFormat("yyyy-MM-dd")
+        self.attendance_date_from.setCalendarPopup(True)
+        self.attendance_date_from.setStyleSheet("""
+            QDateEdit {
+                padding: 6px;
+                border: 1px solid #3B82F6;
+                border-radius: 4px;
+                color: #0F172A;
+                background-color: white;
+            }
+            QDateEdit:focus {
+                border: 2px solid #1E3A8A;
+            }
+        """)
+        
+        date_to_label = QLabel("To Date:")
+        date_to_label.setStyleSheet("color: #0F172A; font-weight: bold;")
+        self.attendance_date_to = QDateEdit()
+        self.attendance_date_to.setDate(QDate.currentDate())
+        self.attendance_date_to.setDisplayFormat("yyyy-MM-dd")
+        self.attendance_date_to.setCalendarPopup(True)
+        self.attendance_date_to.setStyleSheet("""
+            QDateEdit {
+                padding: 6px;
+                border: 1px solid #3B82F6;
+                border-radius: 4px;
+                color: #0F172A;
+                background-color: white;
+            }
+            QDateEdit:focus {
+                border: 2px solid #1E3A8A;
+            }
+        """)
+        
+        # Department filter
+        dept_filter_label = QLabel("Department:")
+        dept_filter_label.setStyleSheet("color: #0F172A; font-weight: bold;")
+        self.attendance_dept_filter = QComboBox()
+        self.update_department_filter_combo()  # Populate departments
+        self.attendance_dept_filter.setStyleSheet("""
+            QComboBox {
+                padding: 6px;
+                border: 1px solid #3B82F6;
+                border-radius: 4px;
+                color: #0F172A;
+                background-color: white;
+            }
+            QComboBox:focus {
+                border: 2px solid #1E3A8A;
+            }
+        """)
+        
+        # Staff ID filter
+        staff_id_label = QLabel("Staff ID:")
+        staff_id_label.setStyleSheet("color: #0F172A; font-weight: bold;")
+        self.attendance_staff_id_filter = QLineEdit()
+        self.attendance_staff_id_filter.setPlaceholderText("Filter by Staff ID...")
+        self.attendance_staff_id_filter.setStyleSheet("""
+            QLineEdit {
+                padding: 6px;
+                border: 1px solid #3B82F6;
+                border-radius: 4px;
+                color: #0F172A;
+                background-color: white;
+            }
+            QLineEdit:focus {
+                border: 2px solid #1E3A8A;
+            }
+        """)
+        
+        # Apply filter button
+        apply_filter_button = QPushButton("Apply Filters")
+        apply_filter_button.clicked.connect(self.apply_attendance_filters)
+        apply_filter_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3B82F6;
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #2563EB;
+            }
+            QPushButton:pressed {
+                background-color: #1D4ED8;
+            }
+        """)
+        
+        # Clear filter button
+        clear_filter_button = QPushButton("Clear Filters")
+        clear_filter_button.clicked.connect(self.clear_attendance_filters)
+        clear_filter_button.setStyleSheet("""
+            QPushButton {
+                background-color: #94A3B8;
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #64748B;
+            }
+            QPushButton:pressed {
+                background-color: #475569;
+            }
+        """)
+        
+        # Add filters to layout
+        filter_layout.addWidget(date_from_label)
+        filter_layout.addWidget(self.attendance_date_from)
+        filter_layout.addWidget(date_to_label)
+        filter_layout.addWidget(self.attendance_date_to)
+        filter_layout.addWidget(dept_filter_label)
+        filter_layout.addWidget(self.attendance_dept_filter)
+        filter_layout.addWidget(staff_id_label)
+        filter_layout.addWidget(self.attendance_staff_id_filter)
+        filter_layout.addWidget(apply_filter_button)
+        filter_layout.addWidget(clear_filter_button)
+        filter_layout.addStretch()
+        
+        layout.addLayout(filter_layout)
+        
+        # Pagination controls
+        pagination_layout = QHBoxLayout()
+        
+        self.attendance_page_label = QLabel("Page 1 of 1")
+        self.attendance_page_label.setStyleSheet("color: #0F172A; font-weight: bold; margin: 5px;")
+        pagination_layout.addWidget(self.attendance_page_label)
+        
+        pagination_layout.addStretch()
+        
+        self.attendance_prev_button = QPushButton("Previous")
+        self.attendance_prev_button.clicked.connect(lambda: self.change_attendance_page(-1))
+        self.attendance_prev_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3B82F6;  /* Light blue */
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 5px;
+                font-weight: bold;
+                margin: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2563EB;  /* Medium blue */
+            }
+            QPushButton:pressed {
+                background-color: #1D4ED8;  /* Darker blue */
+            }
+        """)
+        self.attendance_prev_button.setEnabled(False)  # Disabled initially
+        pagination_layout.addWidget(self.attendance_prev_button)
+        
+        self.attendance_page_input = QLineEdit("1")
+        self.attendance_page_input.setMaximumWidth(50)
+        self.attendance_page_input.returnPressed.connect(self.goto_attendance_page)
+        self.attendance_page_input.setStyleSheet("""
+            QLineEdit {
+                padding: 6px;
+                border: 1px solid #3B82F6;  /* Light blue */
+                border-radius: 4px;
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+                background-color: white;
+                text-align: center;
+            }
+            QLineEdit:focus {
+                border: 2px solid #1E3A8A;  /* Dark blue */
+            }
+        """)
+        pagination_layout.addWidget(QLabel("Go to page:"))
+        pagination_layout.addWidget(self.attendance_page_input)
+        
+        self.attendance_next_button = QPushButton("Next")
+        self.attendance_next_button.clicked.connect(lambda: self.change_attendance_page(1))
+        self.attendance_next_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3B82F6;  /* Light blue */
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 5px;
+                font-weight: bold;
+                margin: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2563EB;  /* Medium blue */
+            }
+            QPushButton:pressed {
+                background-color: #1D4ED8;  /* Darker blue */
+            }
+        """)
+        self.attendance_next_button.setEnabled(False)  # Disabled initially
+        pagination_layout.addWidget(self.attendance_next_button)
+        
+        # Initialize pagination variables
+        self.attendance_current_page = 1
+        self.attendance_items_per_page = 20  # Show 20 attendance records per page
+        self.attendance_total_items = 0
+        self.attendance_total_pages = 1
+        
+        # Store filter values
+        self.attendance_filters = {
+            'date_from': None,
+            'date_to': None,
+            'department': None,
+            'staff_id': None
+        }
+        
+        layout.addLayout(pagination_layout)
+        
         refresh_button = QPushButton("Refresh Records")
         refresh_button.clicked.connect(self.refresh_attendance)
         refresh_button.setStyleSheet("""
@@ -302,18 +604,6 @@ class AdminWidget(QWidget):
         layout = QVBoxLayout()
         layout.setSpacing(20)
         
-        # Main title
-       # title_label = QLabel("Export Attendance Data")
-       # title_label.setAlignment(Qt.AlignCenter)
-       # title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #0F172A; margin: 10px;")
-       # layout.addWidget(title_label)
-        
-        # Description
-       # desc_label = QLabel("Export attendance records to CSV file for external use.")
-       # desc_label.setAlignment(Qt.AlignCenter)
-       # desc_label.setStyleSheet("color: #0F172A; font-size: 12px; margin: 5px;")
-       # layout.addWidget(desc_label)
-        
         # Export group
         export_group = QGroupBox("Export Attendance Data")
         export_group.setStyleSheet("""
@@ -336,8 +626,99 @@ class AdminWidget(QWidget):
         export_layout = QVBoxLayout()
         export_layout.setSpacing(15)
         
+        # Filter controls for export
+        filter_layout = QHBoxLayout()
+        
+        # Date range filters
+        date_from_label = QLabel("From Date:")
+        date_from_label.setStyleSheet("color: #0F172A; font-weight: bold;")
+        self.export_date_from = QDateEdit()
+        self.export_date_from.setDate(QDate.currentDate().addMonths(-1))  # Default to last month
+        self.export_date_from.setDisplayFormat("yyyy-MM-dd")
+        self.export_date_from.setCalendarPopup(True)
+        self.export_date_from.setStyleSheet("""
+            QDateEdit {
+                padding: 6px;
+                border: 1px solid #3B82F6;
+                border-radius: 4px;
+                color: #0F172A;
+                background-color: white;
+            }
+            QDateEdit:focus {
+                border: 2px solid #1E3A8A;
+            }
+        """)
+        
+        date_to_label = QLabel("To Date:")
+        date_to_label.setStyleSheet("color: #0F172A; font-weight: bold;")
+        self.export_date_to = QDateEdit()
+        self.export_date_to.setDate(QDate.currentDate())
+        self.export_date_to.setDisplayFormat("yyyy-MM-dd")
+        self.export_date_to.setCalendarPopup(True)
+        self.export_date_to.setStyleSheet("""
+            QDateEdit {
+                padding: 6px;
+                border: 1px solid #3B82F6;
+                border-radius: 4px;
+                color: #0F172A;
+                background-color: white;
+            }
+            QDateEdit:focus {
+                border: 2px solid #1E3A8A;
+            }
+        """)
+        
+        # Department filter
+        dept_filter_label = QLabel("Department:")
+        dept_filter_label.setStyleSheet("color: #0F172A; font-weight: bold;")
+        self.export_dept_filter = QComboBox()
+        self.update_export_department_combo()  # Populate departments
+        self.export_dept_filter.setStyleSheet("""
+            QComboBox {
+                padding: 6px;
+                border: 1px solid #3B82F6;
+                border-radius: 4px;
+                color: #0F172A;
+                background-color: white;
+            }
+            QComboBox:focus {
+                border: 2px solid #1E3A8A;
+            }
+        """)
+        
+        # Staff ID filter
+        staff_id_label = QLabel("Staff ID:")
+        staff_id_label.setStyleSheet("color: #0F172A; font-weight: bold;")
+        self.export_staff_id_filter = QLineEdit()
+        self.export_staff_id_filter.setPlaceholderText("Filter by Staff ID...")
+        self.export_staff_id_filter.setStyleSheet("""
+            QLineEdit {
+                padding: 6px;
+                border: 1px solid #3B82F6;
+                border-radius: 4px;
+                color: #0F172A;
+                background-color: white;
+            }
+            QLineEdit:focus {
+                border: 2px solid #1E3A8A;
+            }
+        """)
+        
+        # Add filters to layout
+        filter_layout.addWidget(date_from_label)
+        filter_layout.addWidget(self.export_date_from)
+        filter_layout.addWidget(date_to_label)
+        filter_layout.addWidget(self.export_date_to)
+        filter_layout.addWidget(dept_filter_label)
+        filter_layout.addWidget(self.export_dept_filter)
+        filter_layout.addWidget(staff_id_label)
+        filter_layout.addWidget(self.export_staff_id_filter)
+        filter_layout.addStretch()
+        
+        export_layout.addLayout(filter_layout)
+        
         # Export description
-        export_desc = QLabel("Click the button below to export all attendance records to a CSV file.")
+        export_desc = QLabel("Click the button below to export attendance records to a CSV file with selected filters.")
         export_desc.setAlignment(Qt.AlignCenter)
         export_desc.setWordWrap(True)
         export_desc.setStyleSheet("color: #0F172A; margin: 10px;")
@@ -492,6 +873,86 @@ class AdminWidget(QWidget):
         layout.addWidget(QLabel("Departments"))
         layout.addWidget(self.dept_table)
         
+        # Pagination controls
+        pagination_layout = QHBoxLayout()
+        
+        self.dept_page_label = QLabel("Page 1 of 1")
+        self.dept_page_label.setStyleSheet("color: #0F172A; font-weight: bold; margin: 5px;")
+        pagination_layout.addWidget(self.dept_page_label)
+        
+        pagination_layout.addStretch()
+        
+        self.dept_prev_button = QPushButton("Previous")
+        self.dept_prev_button.clicked.connect(lambda: self.change_dept_page(-1))
+        self.dept_prev_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3B82F6;  /* Light blue */
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 5px;
+                font-weight: bold;
+                margin: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2563EB;  /* Medium blue */
+            }
+            QPushButton:pressed {
+                background-color: #1D4ED8;  /* Darker blue */
+            }
+        """)
+        self.dept_prev_button.setEnabled(False)  # Disabled initially
+        pagination_layout.addWidget(self.dept_prev_button)
+        
+        self.dept_page_input = QLineEdit("1")
+        self.dept_page_input.setMaximumWidth(50)
+        self.dept_page_input.returnPressed.connect(self.goto_dept_page)
+        self.dept_page_input.setStyleSheet("""
+            QLineEdit {
+                padding: 6px;
+                border: 1px solid #3B82F6;  /* Light blue */
+                border-radius: 4px;
+                color: #0F172A;  /* Dark blue-gray for better contrast */
+                background-color: white;
+                text-align: center;
+            }
+            QLineEdit:focus {
+                border: 2px solid #1E3A8A;  /* Dark blue */
+            }
+        """)
+        pagination_layout.addWidget(QLabel("Go to page:"))
+        pagination_layout.addWidget(self.dept_page_input)
+        
+        self.dept_next_button = QPushButton("Next")
+        self.dept_next_button.clicked.connect(lambda: self.change_dept_page(1))
+        self.dept_next_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3B82F6;  /* Light blue */
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 5px;
+                font-weight: bold;
+                margin: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2563EB;  /* Medium blue */
+            }
+            QPushButton:pressed {
+                background-color: #1D4ED8;  /* Darker blue */
+            }
+        """)
+        self.dept_next_button.setEnabled(False)  # Disabled initially
+        pagination_layout.addWidget(self.dept_next_button)
+        
+        # Initialize pagination variables
+        self.dept_current_page = 1
+        self.dept_items_per_page = 20  # Show 20 departments per page
+        self.dept_total_items = 0
+        self.dept_total_pages = 1
+        
+        layout.addLayout(pagination_layout)
+        
         # Refresh button
         refresh_dept_button = QPushButton("Refresh Departments")
         refresh_dept_button.clicked.connect(self.refresh_departments)
@@ -625,10 +1086,41 @@ class AdminWidget(QWidget):
             QMessageBox.warning(self, "Input Error", "Please fill in all fields")
     
     def refresh_attendance(self):
-        # Fetch attendance records from the database
-        self.attendance_table.setRowCount(0)  # Clear existing data
+        # Convert QDate objects to strings for database query
+        date_from = self.attendance_date_from.date().toString("yyyy-MM-dd") if self.attendance_date_from.date().year() > 1752 else None
+        date_to = self.attendance_date_to.date().toString("yyyy-MM-dd") if self.attendance_date_to.date().year() > 1752 else None
+        department = self.attendance_dept_filter.currentText() if self.attendance_dept_filter.currentText() != "All Departments" else None
+        staff_id = self.attendance_staff_id_filter.text().strip() if self.attendance_staff_id_filter.text().strip() else None
+
+        # Fetch attendance records from the database with pagination and filters
+        offset = (self.attendance_current_page - 1) * self.attendance_items_per_page
+        records = self.db.get_all_attendance(
+            limit=self.attendance_items_per_page,
+            offset=offset,
+            date_from=date_from,
+            date_to=date_to,
+            department=department,
+            staff_id=staff_id
+        )
         
-        records = self.db.get_all_attendance()
+        # Update total attendance count with filters
+        self.attendance_total_items = self.db.get_total_attendance_count(
+            date_from=date_from,
+            date_to=date_to,
+            department=department,
+            staff_id=staff_id
+        )
+        self.attendance_total_pages = max(1, (self.attendance_total_items + self.attendance_items_per_page - 1) // self.attendance_items_per_page)
+        
+        # Update the page label
+        self.attendance_page_label.setText(f"Page {self.attendance_current_page} of {self.attendance_total_pages}")
+        
+        # Update pagination button states
+        self.attendance_prev_button.setEnabled(self.attendance_current_page > 1)
+        self.attendance_next_button.setEnabled(self.attendance_current_page < self.attendance_total_pages)
+        
+        # Clear existing data
+        self.attendance_table.setRowCount(0)
         
         for row_idx, record in enumerate(records):
             self.attendance_table.insertRow(row_idx)
@@ -639,12 +1131,89 @@ class AdminWidget(QWidget):
                 item = QTableWidgetItem(str(data))
                 item.setTextAlignment(Qt.AlignCenter)  # Center the text
                 self.attendance_table.setItem(row_idx, col_idx, item)
+
+    def change_attendance_page(self, direction):
+        """Change the current page for attendance records"""
+        new_page = self.attendance_current_page + direction
+        
+        if 1 <= new_page <= self.attendance_total_pages:
+            self.attendance_current_page = new_page
+            self.refresh_attendance()
+
+    def goto_attendance_page(self):
+        """Go to a specific page for attendance records"""
+        try:
+            page_num = int(self.attendance_page_input.text())
+            if 1 <= page_num <= self.attendance_total_pages:
+                self.attendance_current_page = page_num
+                self.refresh_attendance()
+            else:
+                # Show error if page number is invalid
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.warning(self, "Invalid Page", f"Please enter a page number between 1 and {self.attendance_total_pages}")
+                self.attendance_page_input.setText(str(self.attendance_current_page))  # Reset to current page
+        except ValueError:
+            # Show error if input is not a valid number
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Invalid Input", "Please enter a valid page number")
+            self.attendance_page_input.setText(str(self.attendance_current_page))  # Reset to current page
+
+    def update_department_filter_combo(self):
+        """Update the department filter combobox with all available departments"""
+        # Clear current items
+        self.attendance_dept_filter.clear()
+        
+        # Add "All Departments" option first
+        self.attendance_dept_filter.addItem("All Departments")
+        
+        # Get all departments from the database
+        departments = self.db.get_all_departments()
+        
+        # Add departments to the combobox
+        for dept_id, dept_name, description in departments:
+            self.attendance_dept_filter.addItem(dept_name)
+
+    def apply_attendance_filters(self):
+        """Apply the selected filters to attendance data"""
+        # Reset to first page when applying filters
+        self.attendance_current_page = 1
+        self.refresh_attendance()
+
+    def clear_attendance_filters(self):
+        """Clear all filters and reset to default values"""
+        # Reset to current date range (last month to today)
+        from PySide6.QtCore import QDate
+        self.attendance_date_from.setDate(QDate.currentDate().addMonths(-1))
+        self.attendance_date_to.setDate(QDate.currentDate())
+        
+        # Reset department filter to "All Departments"
+        self.attendance_dept_filter.setCurrentIndex(0)
+        
+        # Clear staff ID filter
+        self.attendance_staff_id_filter.clear()
+        
+        # Reset to first page and refresh
+        self.attendance_current_page = 1
+        self.refresh_attendance()
     
     def refresh_staff(self):
-        # Fetch staff records from the database
-        self.staff_table.setRowCount(0)  # Clear existing data
+        # Fetch staff records from the database with pagination
+        offset = (self.staff_current_page - 1) * self.staff_items_per_page
+        records = self.db.get_all_staff(limit=self.staff_items_per_page, offset=offset)
         
-        records = self.db.get_all_staff()
+        # Update total staff count and calculate total pages
+        self.staff_total_items = self.db.get_total_staff_count()
+        self.staff_total_pages = max(1, (self.staff_total_items + self.staff_items_per_page - 1) // self.staff_items_per_page)
+        
+        # Update the page label
+        self.staff_page_label.setText(f"Page {self.staff_current_page} of {self.staff_total_pages}")
+        
+        # Update pagination button states
+        self.staff_prev_button.setEnabled(self.staff_current_page > 1)
+        self.staff_next_button.setEnabled(self.staff_current_page < self.staff_total_pages)
+        
+        # Clear existing data
+        self.staff_table.setRowCount(0)
         
         for row_idx, record in enumerate(records):
             self.staff_table.insertRow(row_idx)
@@ -694,6 +1263,32 @@ class AdminWidget(QWidget):
             # Add a hidden column to store the staff ID for reference
             self.staff_table.setItem(row_idx, 5, QTableWidgetItem(str(record[0])))  # Staff ID
             self.staff_table.setColumnHidden(5, True)  # Hide this column
+
+    def change_staff_page(self, direction):
+        """Change the current page for staff records"""
+        new_page = self.staff_current_page + direction
+        
+        if 1 <= new_page <= self.staff_total_pages:
+            self.staff_current_page = new_page
+            self.refresh_staff()
+
+    def goto_staff_page(self):
+        """Go to a specific page for staff records"""
+        try:
+            page_num = int(self.staff_page_input.text())
+            if 1 <= page_num <= self.staff_total_pages:
+                self.staff_current_page = page_num
+                self.refresh_staff()
+            else:
+                # Show error if page number is invalid
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.warning(self, "Invalid Page", f"Please enter a page number between 1 and {self.staff_total_pages}")
+                self.staff_page_input.setText(str(self.staff_current_page))  # Reset to current page
+        except ValueError:
+            # Show error if input is not a valid number
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Invalid Input", "Please enter a valid page number")
+            self.staff_page_input.setText(str(self.staff_current_page))  # Reset to current page
     
     def edit_staff(self, row):
         # Get the staff ID from the hidden column
@@ -857,12 +1452,26 @@ class AdminWidget(QWidget):
             QMessageBox.warning(self, "Error", f"Department '{name}' already exists!")
     
     def refresh_departments(self):
-        """Refresh the departments table"""
+        """Refresh the departments table with pagination"""
+        # Calculate offset for pagination
+        offset = (self.dept_current_page - 1) * self.dept_items_per_page
+        
+        # Get departments from the database with pagination
+        departments = self.db.get_all_departments(limit=self.dept_items_per_page, offset=offset)
+        
+        # Update total departments count
+        self.dept_total_items = self.db.get_total_departments_count()
+        self.dept_total_pages = max(1, (self.dept_total_items + self.dept_items_per_page - 1) // self.dept_items_per_page)
+        
+        # Update the page label
+        self.dept_page_label.setText(f"Page {self.dept_current_page} of {self.dept_total_pages}")
+        
+        # Update pagination button states
+        self.dept_prev_button.setEnabled(self.dept_current_page > 1)
+        self.dept_next_button.setEnabled(self.dept_current_page < self.dept_total_pages)
+        
         # Clear existing data
         self.dept_table.setRowCount(0)
-        
-        # Get all departments from the database
-        departments = self.db.get_all_departments()
         
         for row_idx, (dept_id, dept_name, dept_description) in enumerate(departments):
             self.dept_table.insertRow(row_idx)
@@ -926,6 +1535,32 @@ class AdminWidget(QWidget):
             
             # Add the actions widget to the table
             self.dept_table.setCellWidget(row_idx, 3, actions_widget)
+
+    def change_dept_page(self, direction):
+        """Change the current page for department records"""
+        new_page = self.dept_current_page + direction
+        
+        if 1 <= new_page <= self.dept_total_pages:
+            self.dept_current_page = new_page
+            self.refresh_departments()
+
+    def goto_dept_page(self):
+        """Go to a specific page for department records"""
+        try:
+            page_num = int(self.dept_page_input.text())
+            if 1 <= page_num <= self.dept_total_pages:
+                self.dept_current_page = page_num
+                self.refresh_departments()
+            else:
+                # Show error if page number is invalid
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.warning(self, "Invalid Page", f"Please enter a page number between 1 and {self.dept_total_pages}")
+                self.dept_page_input.setText(str(self.dept_current_page))  # Reset to current page
+        except ValueError:
+            # Show error if input is not a valid number
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Invalid Input", "Please enter a valid page number")
+            self.dept_page_input.setText(str(self.dept_current_page))  # Reset to current page
     
     def edit_department(self, dept_id):
         """Edit an existing department"""
@@ -1175,6 +1810,21 @@ class AdminWidget(QWidget):
             else:
                 QMessageBox.warning(self, "Input Error", "Please fill in all fields.")
 
+    def update_export_department_combo(self):
+        """Update the export department filter combobox with all available departments"""
+        # Clear current items
+        self.export_dept_filter.clear()
+        
+        # Add "All Departments" option first
+        self.export_dept_filter.addItem("All Departments")
+        
+        # Get all departments from the database
+        departments = self.db.get_all_departments()
+        
+        # Add departments to the combobox
+        for dept_id, dept_name, description in departments:
+            self.export_dept_filter.addItem(dept_name)
+
     def delete_staff_by_id(self, staff_id: str) -> bool:
         """Delete staff by directly using ID"""
         # Get staff info to show in confirmation
@@ -1260,8 +1910,19 @@ class AdminWidget(QWidget):
         )
         
         if filename:
-            # Get attendance records from database
-            records = self.db.get_all_attendance()
+            # Convert QDate objects to strings for database query
+            date_from = self.export_date_from.date().toString("yyyy-MM-dd") if self.export_date_from.date().year() > 1752 else None
+            date_to = self.export_date_to.date().toString("yyyy-MM-dd") if self.export_date_to.date().year() > 1752 else None
+            department = self.export_dept_filter.currentText() if self.export_dept_filter.currentText() != "All Departments" else None
+            staff_id = self.export_staff_id_filter.text().strip() if self.export_staff_id_filter.text().strip() else None
+            
+            # Get attendance records from database with filters
+            records = self.db.get_all_attendance(
+                date_from=date_from,
+                date_to=date_to,
+                department=department,
+                staff_id=staff_id
+            )
             
             # Write to CSV file
             try:
