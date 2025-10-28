@@ -461,7 +461,45 @@ class DatabaseManager:
         conn.close()
         return late_count
 
-    def get_staff_with_late_attendance(self, year: int, month: int, min_late_count: int = 1) -> List[tuple]:
+    def get_total_late_attendance_count(self, year: int, month: int, min_late_count: int = 1) -> int:
+        """Get the total count of staff with late attendance for pagination"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Define late arrival time (after 8:30 AM)
+        late_time = "08:30:00"
+        
+        # Format the date range for the specific month
+        start_date = f"{year:04d}-{month:02d}-01"
+        if month == 12:
+            end_date = f"{year+1:04d}-01-01"  # Next year, January
+        else:
+            end_date = f"{year:04d}-{month+1:02d}-01"  # Next month
+
+        # Count staff members with late attendance above the threshold
+        query_count = """
+            SELECT COUNT(*) 
+            FROM (
+                SELECT 
+                    staff_id,
+                    COUNT(*) as late_count
+                FROM attendance 
+                WHERE date >= ? 
+                AND date < ? 
+                AND time_in > ? 
+                AND time_in IS NOT NULL
+                GROUP BY staff_id
+                HAVING late_count >= ?
+            )
+        """
+        
+        cursor.execute(query_count, (start_date, end_date, late_time, min_late_count))
+        count = cursor.fetchone()[0]
+        
+        conn.close()
+        return count
+
+    def get_staff_with_late_attendance(self, year: int, month: int, min_late_count: int = 1, limit: int = None, offset: int = 0) -> List[tuple]:
         """Get staff who were late more than a specified number of times in a month"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -488,9 +526,16 @@ class DatabaseManager:
             AND time_in IS NOT NULL
             GROUP BY staff_id
             HAVING late_count >= ?
+            ORDER BY late_count DESC, staff_id
         """
         
-        cursor.execute(query_count, (start_date, end_date, late_time, min_late_count))
+        if limit is not None:
+            query_count += " LIMIT ? OFFSET ?"
+            params = (start_date, end_date, late_time, min_late_count, limit, offset)
+        else:
+            params = (start_date, end_date, late_time, min_late_count)
+        
+        cursor.execute(query_count, params)
         late_counts = cursor.fetchall()
         
         results = []
@@ -521,9 +566,6 @@ class DatabaseManager:
                     name, department = "Unknown", "Unknown"
             
             results.append((staff_id, name, department, late_count))
-        
-        # Sort results by late count descending, then by name
-        results.sort(key=lambda x: (-x[3], x[1]))
         
         conn.close()
         return results

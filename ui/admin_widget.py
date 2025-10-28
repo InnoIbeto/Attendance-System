@@ -5,7 +5,7 @@ Admin widget for managing staff and viewing attendance
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QPushButton, QLineEdit, QTableWidget, 
-    QTableWidgetItem, QTabWidget, QFormLayout, QGroupBox, QHeaderView, QFileDialog, QDialog, QMessageBox, QDateEdit, QComboBox
+    QTableWidgetItem, QTabWidget, QFormLayout, QGroupBox, QHeaderView, QFileDialog, QDialog, QMessageBox, QDateEdit, QComboBox, QCheckBox
 )
 from PySide6.QtCore import Qt, QDate
 from database import DatabaseManager
@@ -66,6 +66,11 @@ class AdminWidget(QWidget):
         from ui.lateness_report_widget import LatenessReportWidget
         lateness_report_tab = LatenessReportWidget()
         tab_widget.addTab(lateness_report_tab, "Lateness Report")
+        
+        # Department View tab
+        from ui.department_widget import DepartmentWidget
+        department_tab = DepartmentWidget()
+        tab_widget.addTab(department_tab, "Departments Overview")
         
         # Export tab
         export_tab = self.create_export_tab()
@@ -704,6 +709,56 @@ class AdminWidget(QWidget):
             }
         """)
         
+        # Lateness filter checkbox
+        self.lateness_filter_checkbox = QCheckBox("Filter by Lateness")
+        self.lateness_filter_checkbox.setStyleSheet("""
+            QCheckBox {
+                color: #0F172A;
+                font-weight: bold;
+                margin-left: 10px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+            }
+            QCheckBox::indicator:unchecked {
+                border: 2px solid #3B82F6;
+                background-color: white;
+            }
+            QCheckBox::indicator:checked {
+                border: 2px solid #3B82F6;
+                background-color: #3B82F6;
+            }
+        """)
+        
+        # Minimum late count input
+        late_count_label = QLabel("Min Late Count:")
+        late_count_label.setStyleSheet("color: #0F172A; font-weight: bold;")
+        self.export_min_late_count = QLineEdit("1")
+        self.export_min_late_count.setPlaceholderText("e.g., 1")
+        self.export_min_late_count.setStyleSheet("""
+            QLineEdit {
+                padding: 6px;
+                border: 1px solid #3B82F6;
+                border-radius: 4px;
+                color: #0F172A;
+                background-color: #E2E8F0;  /* Light gray when disabled */
+                min-width: 60px;
+            }
+            QLineEdit:enabled {
+                background-color: white;
+            }
+            QLineEdit:focus {
+                border: 2px solid #1E3A8A;
+            }
+        """)
+        # Disable the late count input initially
+        self.export_min_late_count.setEnabled(False)
+        self.export_min_late_count.setReadOnly(True)  # Make it read-only initially
+        # Connect checkbox to enable/disable the late count input using multiple signals for reliability
+        self.lateness_filter_checkbox.stateChanged.connect(self.toggle_lateness_filter)
+        self.lateness_filter_checkbox.clicked.connect(lambda: self.toggle_lateness_filter(self.lateness_filter_checkbox.checkState()))
+        
         # Add filters to layout
         filter_layout.addWidget(date_from_label)
         filter_layout.addWidget(self.export_date_from)
@@ -713,6 +768,9 @@ class AdminWidget(QWidget):
         filter_layout.addWidget(self.export_dept_filter)
         filter_layout.addWidget(staff_id_label)
         filter_layout.addWidget(self.export_staff_id_filter)
+        filter_layout.addWidget(self.lateness_filter_checkbox)
+        filter_layout.addWidget(late_count_label)
+        filter_layout.addWidget(self.export_min_late_count)
         filter_layout.addStretch()
         
         export_layout.addLayout(filter_layout)
@@ -1824,6 +1882,43 @@ class AdminWidget(QWidget):
         # Add departments to the combobox
         for dept_id, dept_name, description in departments:
             self.export_dept_filter.addItem(dept_name)
+    
+    def toggle_lateness_filter(self, state):
+        """Enable or disable the minimum late count input based on checkbox state"""
+        if state == Qt.Checked:
+            self.export_min_late_count.setEnabled(True)
+            self.export_min_late_count.setReadOnly(False)  # Make sure it's not read-only
+            self.export_min_late_count.setStyleSheet("""
+                QLineEdit {
+                    padding: 6px;
+                    border: 1px solid #3B82F6;
+                    border-radius: 4px;
+                    color: #0F172A;
+                    background-color: white;
+                    min-width: 60px;
+                }
+                QLineEdit:focus {
+                    border: 2px solid #1E3A8A;
+                }
+            """)
+        else:
+            self.export_min_late_count.setEnabled(False)
+            self.export_min_late_count.setReadOnly(True)  # Make it read-only when disabled
+            self.export_min_late_count.setStyleSheet("""
+                QLineEdit {
+                    padding: 6px;
+                    border: 1px solid #3B82F6;
+                    border-radius: 4px;
+                    color: #0F172A;
+                    background-color: #E2E8F0;  /* Light gray when disabled */
+                    min-width: 60px;
+                }
+                QLineEdit:focus {
+                    border: 2px solid #1E3A8A;
+                }
+            """)
+        # Force a UI update
+        self.export_min_late_count.update()
 
     def delete_staff_by_id(self, staff_id: str) -> bool:
         """Delete staff by directly using ID"""
@@ -1916,6 +2011,20 @@ class AdminWidget(QWidget):
             department = self.export_dept_filter.currentText() if self.export_dept_filter.currentText() != "All Departments" else None
             staff_id = self.export_staff_id_filter.text().strip() if self.export_staff_id_filter.text().strip() else None
             
+            # Check if lateness filter is enabled
+            filter_by_lateness = self.lateness_filter_checkbox.isChecked()
+            min_late_count = 1
+            
+            if filter_by_lateness:
+                try:
+                    min_late_count = int(self.export_min_late_count.text().strip())
+                    if min_late_count < 1:
+                        min_late_count = 1
+                        self.export_min_late_count.setText("1")
+                except ValueError:
+                    min_late_count = 1
+                    self.export_min_late_count.setText("1")
+            
             # Get attendance records from database with filters
             records = self.db.get_all_attendance(
                 date_from=date_from,
@@ -1924,6 +2033,49 @@ class AdminWidget(QWidget):
                 staff_id=staff_id
             )
             
+            # If lateness filter is enabled, filter the records to only include staff who meet the lateness criteria
+            if filter_by_lateness and records:
+                # For lateness filtering, we need to identify staff who were late at least the specified number of times
+                # within the specified date range. Since the current database method works on a monthly basis,
+                # we'll implement a manual check for the date range provided.
+                
+                # First, get unique staff IDs from the records
+                all_staff_ids = list(set([record[0] for record in records]))  # Extract unique staff IDs
+                late_staff_ids = []
+                
+                # Check each staff member to see if they meet the lateness criteria in the date range
+                for staff_id in all_staff_ids:
+                    # Count late arrivals for this staff member in the date range
+                    late_count = 0
+                    for record in records:
+                        if record[0] == staff_id and record[4]:  # Check if staff_id matches and time_in exists
+                            time_in = record[4]
+                            date = record[3]
+                            
+                            # Check if the date is within the specified range (if specified)
+                            date_ok = True
+                            if date_from and date < date_from:
+                                date_ok = False
+                            if date_to and date > date_to:
+                                date_ok = False
+                            
+                            if date_ok:
+                                # Check if arrival time is after 8:30 AM (late arrival)
+                                if time_in > "08:30:00":
+                                    late_count += 1
+                    
+                    # If this staff member meets the minimum late count, add to the list
+                    if late_count >= min_late_count:
+                        late_staff_ids.append(staff_id)
+                
+                # Filter the records to include only those from staff members who met the lateness criteria
+                filtered_records = [record for record in records if record[0] in late_staff_ids]
+                records = filtered_records
+                
+                # Filter the records to include only those from late staff
+                filtered_records = [record for record in records if record[0] in late_staff_ids]
+                records = filtered_records
+            
             # Write to CSV file
             try:
                 with open(filename, 'w', newline='') as csvfile:
@@ -1931,7 +2083,12 @@ class AdminWidget(QWidget):
                     writer.writerow(['Staff ID', 'Name', 'Department', 'Date', 'Time In', 'Time Out'])  # Header
                     writer.writerows(records)  # Data rows
                 
-                QMessageBox.information(self, "Export", f"Attendance records exported successfully to {filename}")
+                # Show information about the export
+                info_message = f"Attendance records exported successfully to {filename}"
+                if filter_by_lateness:
+                    info_message += f"\n\nRecords filtered to show only staff who were late at least {min_late_count} time(s) in the period."
+                
+                QMessageBox.information(self, "Export", info_message)
             except Exception as e:
                 QMessageBox.critical(self, "Export Error", f"Failed to export records: {str(e)}")
         else:
