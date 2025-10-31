@@ -9,8 +9,8 @@ from PySide6.QtWidgets import (
     QMessageBox, QLineEdit, QDialog, QHBoxLayout, QVBoxLayout, QLabel, QPushButton
 )
 from PySide6.QtCore import Qt
-from .attendance_widget import AttendanceWidget
-from .admin_widget import AdminWidget
+from .admin_view.admin_widget import AdminWidget
+from ui.attendance_view.attendance_widget import AttendanceWidget
 
 
 class AttendanceMainWindow(QMainWindow):
