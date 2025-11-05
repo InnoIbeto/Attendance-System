@@ -29,6 +29,7 @@ class AttendanceRecordsWidget(QWidget):
                 border: 1px solid #3B82F6;  /* Light blue */
                 alternate-background-color: #F0F9FF;  /* Very light blue */
                 selection-background-color: #BAE6FD;  /* Lighter blue for selected items */
+                color: black;  /* Black text for table data */
             }
             QHeaderView::section {
                 background-color: #1E3A8A;  /* Dark blue */
@@ -38,15 +39,15 @@ class AttendanceRecordsWidget(QWidget):
             }
         """)
         
-        # Attendance Records
+        # Attendance Records - Proportional column sizing (Staff ID smallest, Name largest, others 1/2 of name)
         header = self.attendance_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)  # Proportional resizing
         self.attendance_table.setColumnWidth(0, 100)  # Staff ID (smallest)
-        self.attendance_table.setColumnWidth(1, 300)  # Name (2x Department size)
-        self.attendance_table.setColumnWidth(2, 150)  # Department
-        self.attendance_table.setColumnWidth(3, 120)  # Date (same as Time In/Out)
-        self.attendance_table.setColumnWidth(4, 120)  # Time In (same as Date/Time Out)
-        self.attendance_table.setColumnWidth(5, 120)  # Time Out (same as Date/Time In)
+        self.attendance_table.setColumnWidth(1, 300)  # Name (largest)
+        self.attendance_table.setColumnWidth(2, 150)  # Department (1/2 of name)
+        self.attendance_table.setColumnWidth(3, 120)  # Date (1/2 of name, but smaller)
+        self.attendance_table.setColumnWidth(4, 120)  # Time In (1/2 of name, but smaller)
+        self.attendance_table.setColumnWidth(5, 120)  # Time Out (1/2 of name, but smaller)
         
         layout.addWidget(QLabel("Attendance Records"))
         layout.addWidget(self.attendance_table)
@@ -66,11 +67,20 @@ class AttendanceRecordsWidget(QWidget):
                 padding: 6px;
                 border: 1px solid #3B82F6;
                 border-radius: 4px;
-                color: #0F172A;
+                color: black;  /* Black text for date */
                 background-color: white;
             }
             QDateEdit:focus {
                 border: 2px solid #1E3A8A;
+            }
+            QCalendarWidget {
+                color: black;  /* Black text for calendar grid */
+                background-color: white;
+            }
+            QCalendarWidget QAbstractItemView {
+                color: black;  /* Black text for calendar items */
+                selection-background-color: #BAE6FD;
+                alternate-background-color: #F0F9FF;
             }
         """)
         
@@ -85,11 +95,20 @@ class AttendanceRecordsWidget(QWidget):
                 padding: 6px;
                 border: 1px solid #3B82F6;
                 border-radius: 4px;
-                color: #0F172A;
+                color: black;  /* Black text for date */
                 background-color: white;
             }
             QDateEdit:focus {
                 border: 2px solid #1E3A8A;
+            }
+            QCalendarWidget {
+                color: black;  /* Black text for calendar grid */
+                background-color: white;
+            }
+            QCalendarWidget QAbstractItemView {
+                color: black;  /* Black text for calendar items */
+                selection-background-color: #BAE6FD;
+                alternate-background-color: #F0F9FF;
             }
         """)
         
@@ -103,11 +122,16 @@ class AttendanceRecordsWidget(QWidget):
                 padding: 6px;
                 border: 1px solid #3B82F6;
                 border-radius: 4px;
-                color: #0F172A;
+                color: black;  /* Black text for dropdown items */
                 background-color: white;
             }
             QComboBox:focus {
                 border: 2px solid #1E3A8A;
+            }
+            QComboBox QAbstractItemView {
+                color: black;  /* Black text for dropdown list items */
+                background-color: white;
+                selection-background-color: #BAE6FD;
             }
         """)
         

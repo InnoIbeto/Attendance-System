@@ -59,11 +59,20 @@ class ExportWidget(QWidget):
                 padding: 6px;
                 border: 1px solid #3B82F6;
                 border-radius: 4px;
-                color: #0F172A;
+                color: black;  /* Black text for date */
                 background-color: white;
             }
             QDateEdit:focus {
                 border: 2px solid #1E3A8A;
+            }
+            QCalendarWidget {
+                color: black;  /* Black text for calendar grid */
+                background-color: white;
+            }
+            QCalendarWidget QAbstractItemView {
+                color: black;  /* Black text for calendar items */
+                selection-background-color: #BAE6FD;
+                alternate-background-color: #F0F9FF;
             }
         """)
         
@@ -78,11 +87,20 @@ class ExportWidget(QWidget):
                 padding: 6px;
                 border: 1px solid #3B82F6;
                 border-radius: 4px;
-                color: #0F172A;
+                color: black;  /* Black text for date */
                 background-color: white;
             }
             QDateEdit:focus {
                 border: 2px solid #1E3A8A;
+            }
+            QCalendarWidget {
+                color: black;  /* Black text for calendar grid */
+                background-color: white;
+            }
+            QCalendarWidget QAbstractItemView {
+                color: black;  /* Black text for calendar items */
+                selection-background-color: #BAE6FD;
+                alternate-background-color: #F0F9FF;
             }
         """)
         
@@ -96,11 +114,16 @@ class ExportWidget(QWidget):
                 padding: 6px;
                 border: 1px solid #3B82F6;
                 border-radius: 4px;
-                color: #0F172A;
+                color: black;  /* Black text for dropdown items */
                 background-color: white;
             }
             QComboBox:focus {
                 border: 2px solid #1E3A8A;
+            }
+            QComboBox QAbstractItemView {
+                color: black;  /* Black text for dropdown list items */
+                background-color: white;
+                selection-background-color: #BAE6FD;
             }
         """)
         

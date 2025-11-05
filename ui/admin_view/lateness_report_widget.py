@@ -53,6 +53,7 @@ class LatenessReportWidget(QWidget):
         
         month_year_label = QLabel("Select Month/Year:")
         month_year_label.setStyleSheet("color: #0F172A; font-weight: bold;")
+        month_year_label.setFixedHeight(20)  # Fixed height for the label
         month_year_layout.addWidget(month_year_label)
         
         # Use QDateEdit to select month/year
@@ -62,16 +63,26 @@ class LatenessReportWidget(QWidget):
         self.month_selector.setCalendarPopup(True)
         self.month_selector.setStyleSheet("""
             QDateEdit {
-                padding: 8px;
+                padding: 4px;
                 border: 1px solid #3B82F6;
                 border-radius: 4px;
-                color: #0F172A;
+                color: black;  /* Black text for date */
                 background-color: white;
             }
             QDateEdit:focus {
                 border: 2px solid #1E3A8A;
             }
+            QCalendarWidget {
+                color: black;  /* Black text for calendar grid */
+                background-color: white;
+            }
+            QCalendarWidget QAbstractItemView {
+                color: black;  /* Black text for calendar items */
+                selection-background-color: #BAE6FD;
+                alternate-background-color: #F0F9FF;
+            }
         """)
+        self.month_selector.setFixedHeight(30)  # Fixed height for the control
         month_year_layout.addWidget(self.month_selector)
         
         params_layout.addLayout(month_year_layout)
@@ -81,22 +92,24 @@ class LatenessReportWidget(QWidget):
         
         min_late_label = QLabel("Minimum Late Count:")
         min_late_label.setStyleSheet("color: #0F172A; font-weight: bold;")
+        min_late_label.setFixedHeight(20)  # Fixed height for the label
         min_late_layout.addWidget(min_late_label)
         
         self.min_late_input = QLineEdit("1")
         self.min_late_input.setPlaceholderText("e.g., 1 or 3")
         self.min_late_input.setStyleSheet("""
             QLineEdit {
-                padding: 8px;
+                padding: 4px;
                 border: 1px solid #3B82F6;
                 border-radius: 4px;
-                color: #0F172A;
+                color: black;  /* Black text for input */
                 background-color: white;
             }
             QLineEdit:focus {
                 border: 2px solid #1E3A8A;
             }
         """)
+        self.min_late_input.setFixedHeight(30)  # Fixed height for the control
         min_late_layout.addWidget(self.min_late_input)
         
         params_layout.addLayout(min_late_layout)
@@ -140,6 +153,7 @@ class LatenessReportWidget(QWidget):
                 border: 1px solid #3B82F6;
                 alternate-background-color: #F0F9FF;
                 selection-background-color: #BAE6FD;
+                color: black;  /* Black text for table data */
             }
             QHeaderView::section {
                 background-color: #1E3A8A;
@@ -149,12 +163,13 @@ class LatenessReportWidget(QWidget):
             }
         """)
         
-        # Set column widths
+        # Set column widths - Proportional column sizing (Staff ID smallest, Name largest, Department 1/2 of name)
         header = self.results_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # Staff ID
-        header.setSectionResizeMode(1, QHeaderView.Stretch)  # Name
-        header.setSectionResizeMode(2, QHeaderView.Stretch)  # Department
-        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)  # Late Arrivals
+        header.setSectionResizeMode(QHeaderView.Stretch)  # Proportional resizing
+        self.results_table.setColumnWidth(0, 100)  # Staff ID (smallest)
+        self.results_table.setColumnWidth(1, 300)  # Name (largest)
+        self.results_table.setColumnWidth(2, 150)  # Department (1/2 of name)
+        self.results_table.setColumnWidth(3, 100)  # Late Arrivals (fixed width)
         
         layout.addWidget(QLabel("Lateness Report Results"))
         layout.addWidget(self.results_table)
@@ -390,6 +405,7 @@ class LatenessReportWidget(QWidget):
             details_table.setStyleSheet("""
                 QTableWidget {
                     border: 1px solid #3B82F6;
+                    color: black;  /* Black text for table data */
                 }
                 QHeaderView::section {
                     background-color: #1E3A8A;
@@ -486,6 +502,7 @@ class LatenessReportWidget(QWidget):
             details_table.setStyleSheet("""
                 QTableWidget {
                     border: 1px solid #3B82F6;
+                    color: black;  /* Black text for table data */
                 }
                 QHeaderView::section {
                     background-color: #1E3A8A;

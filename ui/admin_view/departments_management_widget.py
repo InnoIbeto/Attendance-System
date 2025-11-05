@@ -100,13 +100,14 @@ class DepartmentsManagementWidget(QWidget):
         
         # Table to display departments
         self.dept_table = QTableWidget()
-        self.dept_table.setColumnCount(4)  # ID, Name, Description, Actions
-        self.dept_table.setHorizontalHeaderLabels(["ID", "Name", "Description", "Actions"])
+        self.dept_table.setColumnCount(5)  # ID, Name, Description, Edit, Delete
+        self.dept_table.setHorizontalHeaderLabels(["ID", "Name", "Description", "Edit", "Delete"])
         self.dept_table.setStyleSheet("""
             QTableWidget {
                 border: 1px solid #3B82F6;  /* Light blue */
                 alternate-background-color: #F0F9FF;  /* Very light blue */
                 selection-background-color: #BAE6FD;  /* Lighter blue for selected items */
+                color: black;  /* Black text for table data */
             }
             QHeaderView::section {
                 background-color: #1E3A8A;  /* Dark blue */
@@ -116,12 +117,14 @@ class DepartmentsManagementWidget(QWidget):
             }
         """)
         
-        # Department table sizing
+        # Department table sizing - Proportional column sizing (ID smallest, Name largest, Description 1/2 of name, Edit/Delete fixed)
         header = self.dept_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # ID column - resize to fit
-        header.setSectionResizeMode(1, QHeaderView.Stretch)  # Name column - stretch to fill
-        header.setSectionResizeMode(2, QHeaderView.Stretch)  # Description column - stretch to fill
-        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)  # Actions column - resize to fit
+        header.setSectionResizeMode(QHeaderView.Stretch)  # Proportional resizing
+        self.dept_table.setColumnWidth(0, 80)   # ID (smallest)
+        self.dept_table.setColumnWidth(1, 200)  # Name (largest)
+        self.dept_table.setColumnWidth(2, 150)  # Description (1/2 of name)
+        self.dept_table.setColumnWidth(3, 80)   # Edit button (fixed width)
+        self.dept_table.setColumnWidth(4, 80)   # Delete button (fixed width)
         
         layout.addWidget(QLabel("Departments"))
         layout.addWidget(self.dept_table)
@@ -304,12 +307,6 @@ class DepartmentsManagementWidget(QWidget):
             desc_item.setTextAlignment(Qt.AlignCenter)
             self.dept_table.setItem(row_idx, 2, desc_item)
             
-            # Add action buttons
-            actions_widget = QWidget()
-            actions_layout = QHBoxLayout(actions_widget)
-            actions_layout.setAlignment(Qt.AlignCenter)
-            actions_layout.setContentsMargins(0, 0, 0, 0)
-            
             # Edit button
             edit_btn = QPushButton("Edit")
             edit_btn.setStyleSheet("""
@@ -326,7 +323,7 @@ class DepartmentsManagementWidget(QWidget):
                 }
             """)
             edit_btn.clicked.connect(lambda _, id=dept_id: self.edit_department(id))
-            actions_layout.addWidget(edit_btn)
+            self.dept_table.setCellWidget(row_idx, 3, edit_btn)
             
             # Delete button
             delete_btn = QPushButton("Delete")
@@ -344,10 +341,7 @@ class DepartmentsManagementWidget(QWidget):
                 }
             """)
             delete_btn.clicked.connect(lambda _, id=dept_id: self.delete_department(id))
-            actions_layout.addWidget(delete_btn)
-            
-            # Add the actions widget to the table
-            self.dept_table.setCellWidget(row_idx, 3, actions_widget)
+            self.dept_table.setCellWidget(row_idx, 4, delete_btn)
 
     def change_dept_page(self, direction):
         """Change the current page for department records"""

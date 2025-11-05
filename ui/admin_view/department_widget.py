@@ -41,7 +41,7 @@ class DepartmentWidget(QWidget):
                 padding: 8px;
                 border: 1px solid #3B82F6;
                 border-radius: 4px;
-                color: #0F172A;
+                color: black;  /* Black text for dropdown items */
                 background-color: white;
                 min-width: 200px;
             }
@@ -53,6 +53,11 @@ class DepartmentWidget(QWidget):
                 subcontrol-position: top right;
                 width: 25px;
                 border-left: 1px solid #3B82F6;
+            }
+            QComboBox QAbstractItemView {
+                color: black;  /* Black text for dropdown list items */
+                background-color: white;
+                selection-background-color: #BAE6FD;
             }
         """)
         dept_selection_layout.addWidget(self.department_combo)
@@ -163,6 +168,7 @@ class DepartmentWidget(QWidget):
                 border: 1px solid #3B82F6;
                 alternate-background-color: #F0F9FF;
                 selection-background-color: #BAE6FD;
+                color: black;  /* Black text for table data */
             }
             QHeaderView::section {
                 background-color: #1E3A8A;
@@ -172,12 +178,12 @@ class DepartmentWidget(QWidget):
             }
         """)
         
-        # Set column widths (matching other tables in the application)
+        # Set column widths (proportional sizing - Staff ID smallest, Name largest, Department 1/2 of name)
         header = self.dept_staff_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch)  # Proportional resizing like other tables
+        header.setSectionResizeMode(QHeaderView.Stretch)  # Proportional resizing
         self.dept_staff_table.setColumnWidth(0, 100)  # Staff ID (smallest)
-        self.dept_staff_table.setColumnWidth(1, 300)  # Name (2x Department size)
-        self.dept_staff_table.setColumnWidth(2, 150)  # Department
+        self.dept_staff_table.setColumnWidth(1, 300)  # Name (largest)
+        self.dept_staff_table.setColumnWidth(2, 150)  # Department (1/2 of name)
         
         layout.addWidget(QLabel("Staff by Department"))
         layout.addWidget(self.dept_staff_table)
@@ -198,6 +204,7 @@ class DepartmentWidget(QWidget):
                 border: 1px solid #3B82F6;
                 alternate-background-color: #F0F9FF;
                 selection-background-color: #BAE6FD;
+                color: black;  /* Black text for table data */
             }
             QHeaderView::section {
                 background-color: #1E3A8A;
@@ -207,15 +214,15 @@ class DepartmentWidget(QWidget):
             }
         """)
         
-        # Set column widths (matching other attendance tables in the application)
+        # Set column widths (proportional sizing - Staff ID smallest, Name largest, others 1/2 of name)
         header = self.dept_attendance_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)  # Proportional resizing
         self.dept_attendance_table.setColumnWidth(0, 100)  # Staff ID (smallest)
-        self.dept_attendance_table.setColumnWidth(1, 300)  # Name (2x Department size)
-        self.dept_attendance_table.setColumnWidth(2, 150)  # Department
-        self.dept_attendance_table.setColumnWidth(3, 120)  # Date (same as Time In/Out)
-        self.dept_attendance_table.setColumnWidth(4, 120)  # Time In (same as Date/Time Out)
-        self.dept_attendance_table.setColumnWidth(5, 120)  # Time Out (same as Date/Time In)
+        self.dept_attendance_table.setColumnWidth(1, 300)  # Name (largest)
+        self.dept_attendance_table.setColumnWidth(2, 150)  # Department (1/2 of name)
+        self.dept_attendance_table.setColumnWidth(3, 120)  # Date (1/2 of name, but smaller)
+        self.dept_attendance_table.setColumnWidth(4, 120)  # Time In (1/2 of name, but smaller)
+        self.dept_attendance_table.setColumnWidth(5, 120)  # Time Out (1/2 of name, but smaller)
         
         layout.addWidget(QLabel("Attendance by Department"))
         layout.addWidget(self.dept_attendance_table)

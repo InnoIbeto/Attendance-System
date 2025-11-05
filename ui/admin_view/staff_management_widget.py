@@ -74,7 +74,7 @@ class StaffManagementWidget(QWidget):
                 padding: 8px;
                 border: 1px solid #3B82F6;  /* Light blue */
                 border-radius: 4px;
-                color: #0F172A;  /* Dark blue-gray for better contrast */
+                color: black;  /* Black text for dropdown items */
                 background-color: white;
             }
             QComboBox:focus {
@@ -90,6 +90,11 @@ class StaffManagementWidget(QWidget):
                 image: url(noimg);
                 width: 10px;
                 height: 10px;
+            }
+            QComboBox QAbstractItemView {
+                color: black;  /* Black text for dropdown list items */
+                background-color: white;
+                selection-background-color: #BAE6FD;
             }
         """)
         self.update_department_combo()  # Load departments into the combobox
@@ -130,6 +135,7 @@ class StaffManagementWidget(QWidget):
                 border: 1px solid #3B82F6;  /* Light blue */
                 alternate-background-color: #F0F9FF;  /* Very light blue */
                 selection-background-color: #BAE6FD;  /* Lighter blue for selected items */
+                color: black;  /* Black text for table data */
             }
             QHeaderView::section {
                 background-color: #1E3A8A;  /* Dark blue */
@@ -138,12 +144,12 @@ class StaffManagementWidget(QWidget):
                 border: 1px solid #3B82F6;  /* Light blue */
             }
         """)
-        # Staff Records - Match attendance records column sizing
+        # Staff Records - Proportional column sizing (Staff ID smallest, Name largest, Department 1/2 of name)
         header = self.staff_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)  # Proportional resizing like attendance
         self.staff_table.setColumnWidth(0, 100)  # Staff ID (smallest)
-        self.staff_table.setColumnWidth(1, 300)  # Name (2x Department size)
-        self.staff_table.setColumnWidth(2, 150)  # Department
+        self.staff_table.setColumnWidth(1, 300)  # Name (largest)
+        self.staff_table.setColumnWidth(2, 150)  # Department (1/2 of name)
         self.staff_table.setColumnWidth(3, 80)   # Edit button (fixed width)
         self.staff_table.setColumnWidth(4, 80)   # Delete button (fixed width)
         self.staff_table.setColumnHidden(5, True)  # Hide the ID storage column
