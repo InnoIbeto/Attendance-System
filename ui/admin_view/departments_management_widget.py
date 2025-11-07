@@ -126,7 +126,10 @@ class DepartmentsManagementWidget(QWidget):
         self.dept_table.setColumnWidth(3, 80)   # Edit button (fixed width)
         self.dept_table.setColumnWidth(4, 80)   # Delete button (fixed width)
         
-        layout.addWidget(QLabel("Departments"))
+        departments_label = QLabel("Departments")
+        departments_label.setAlignment(Qt.AlignCenter)
+        departments_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px 0px 5px 0px; color: #0F172A;")
+        layout.addWidget(departments_label)
         layout.addWidget(self.dept_table)
         
         # Pagination controls

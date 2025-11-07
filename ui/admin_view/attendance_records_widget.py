@@ -5,16 +5,19 @@ Attendance Records widget for viewing attendance data
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QPushButton, QLineEdit, QTableWidget, 
-    QTableWidgetItem, QTabWidget, QFormLayout, QGroupBox, QHeaderView, QFileDialog, QDialog, QMessageBox, QDateEdit, QComboBox
+    QTableWidgetItem, QTabWidget, QFormLayout, QGroupBox, QHeaderView, QFileDialog, QDialog, QMessageBox, QDateEdit, QComboBox, QCheckBox
 )
+from PySide6.QtCore import Qt, QDate
 from PySide6.QtCore import Qt, QDate
 from database import DatabaseManager
 
 
 class AttendanceRecordsWidget(QWidget):
-    def __init__(self):
+    def __init__(self, apply_late_filter=False, date_filter_today=False):
         super().__init__()
         self.db = DatabaseManager()
+        self.apply_late_filter = apply_late_filter  # Whether to apply late filter on initialization
+        self.date_filter_today = date_filter_today  # Whether to filter for today's date on initialization
         self.init_ui()
     
     def init_ui(self):
@@ -49,7 +52,10 @@ class AttendanceRecordsWidget(QWidget):
         self.attendance_table.setColumnWidth(4, 120)  # Time In (1/2 of name, but smaller)
         self.attendance_table.setColumnWidth(5, 120)  # Time Out (1/2 of name, but smaller)
         
-        layout.addWidget(QLabel("Attendance Records"))
+        attendance_records_label = QLabel("Attendance Records")
+        attendance_records_label.setAlignment(Qt.AlignCenter)
+        attendance_records_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px 0px 5px 0px; color: #0F172A;")
+        layout.addWidget(attendance_records_label)
         layout.addWidget(self.attendance_table)
         
         # Filter controls
@@ -291,8 +297,37 @@ class AttendanceRecordsWidget(QWidget):
             'date_from': None,
             'date_to': None,
             'department': None,
-            'staff_id': None
+            'staff_id': None,
+            'late_only': False  # New filter for late arrivals only
         }
+        
+        # Add Late Arrivals Only checkbox
+        late_filter_layout = QHBoxLayout()
+        self.late_only_checkbox = QCheckBox("Show Late Arrivals Only")
+        self.late_only_checkbox.setStyleSheet("""
+            QCheckBox {
+                color: #0F172A;
+                font-weight: bold;
+                margin: 5px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+            }
+            QCheckBox::indicator:unchecked {
+                border: 2px solid #3B82F6;
+                background-color: white;
+            }
+            QCheckBox::indicator:checked {
+                border: 2px solid #3B82F6;
+                background-color: #3B82F6;
+            }
+        """)
+        self.late_only_checkbox.stateChanged.connect(self.toggle_late_filter)
+        
+        late_filter_layout.addWidget(self.late_only_checkbox)
+        late_filter_layout.addStretch()
+        layout.addLayout(late_filter_layout)
         
         layout.addLayout(pagination_layout)
         
@@ -319,6 +354,21 @@ class AttendanceRecordsWidget(QWidget):
         self.setLayout(layout)
         
         # Load initial attendance data
+        # If date filter for today was requested, set the date range to today first
+        if self.date_filter_today:
+            today = QDate.currentDate()
+            self.attendance_date_from.setDate(today)
+            self.attendance_date_to.setDate(today)
+        else:
+            # Set default date range to last month to today only if not filtering for today
+            self.attendance_date_from.setDate(QDate.currentDate().addMonths(-1))
+            self.attendance_date_to.setDate(QDate.currentDate())
+        
+        # If late filter was requested during initialization, set the checkbox
+        if self.apply_late_filter:
+            self.late_only_checkbox.setChecked(True)
+            self.attendance_filters['late_only'] = True
+        
         self.refresh_attendance()
     
     def refresh_attendance(self):
@@ -339,14 +389,27 @@ class AttendanceRecordsWidget(QWidget):
             staff_id=staff_id
         )
         
-        # Update total attendance count with filters
-        self.attendance_total_items = self.db.get_total_attendance_count(
-            date_from=date_from,
-            date_to=date_to,
-            department=department,
-            staff_id=staff_id
-        )
-        self.attendance_total_pages = max(1, (self.attendance_total_items + self.attendance_items_per_page - 1) // self.attendance_items_per_page)
+        # If late arrivals only filter is active, filter the records
+        if self.attendance_filters.get('late_only', False):
+            late_records = []
+            late_time = "08:30:00"
+            for record in records:
+                time_in = record[4]  # Time in is at index 4
+                if time_in and time_in > late_time:
+                    late_records.append(record)
+            records = late_records
+            # Update total pages based on filtered records
+            self.attendance_total_items = len(records)
+            self.attendance_total_pages = max(1, (self.attendance_total_items + self.attendance_items_per_page - 1) // self.attendance_items_per_page)
+        else:
+            # Update total attendance count with filters (excluding late filter)
+            self.attendance_total_items = self.db.get_total_attendance_count(
+                date_from=date_from,
+                date_to=date_to,
+                department=department,
+                staff_id=staff_id
+            )
+            self.attendance_total_pages = max(1, (self.attendance_total_items + self.attendance_items_per_page - 1) // self.attendance_items_per_page)
         
         # Update the page label
         self.attendance_page_label.setText(f"Page {self.attendance_current_page} of {self.attendance_total_pages}")
@@ -415,6 +478,17 @@ class AttendanceRecordsWidget(QWidget):
         self.attendance_current_page = 1
         self.refresh_attendance()
 
+    def toggle_late_filter(self, state):
+        """Toggle the late arrivals only filter"""
+        if state == Qt.Checked:
+            self.attendance_filters['late_only'] = True
+        else:
+            self.attendance_filters['late_only'] = False
+        
+        # Reset to first page and refresh when toggling filter
+        self.attendance_current_page = 1
+        self.refresh_attendance()
+
     def clear_attendance_filters(self):
         """Clear all filters and reset to default values"""
         # Reset to current date range (last month to today)
@@ -427,6 +501,10 @@ class AttendanceRecordsWidget(QWidget):
         
         # Clear staff ID filter
         self.attendance_staff_id_filter.clear()
+        
+        # Uncheck late arrivals only filter
+        self.late_only_checkbox.setChecked(False)
+        self.attendance_filters['late_only'] = False
         
         # Reset to first page and refresh
         self.attendance_current_page = 1

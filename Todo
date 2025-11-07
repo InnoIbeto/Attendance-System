@@ -78,4 +78,6 @@ Dependencies confirmed:
       - alligned text to center on staff records and attendance tables 
 
 
-i will create dashboard metrics for quick data view and they will act like shortcuts to query the db or something in that line: Abdul GT
+future works: 
+ - include logic for absent staff (track people that did not login to work on x days)
+ - UIUX improvements 

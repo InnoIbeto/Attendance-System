@@ -171,7 +171,10 @@ class LatenessReportWidget(QWidget):
         self.results_table.setColumnWidth(2, 150)  # Department (1/2 of name)
         self.results_table.setColumnWidth(3, 100)  # Late Arrivals (fixed width)
         
-        layout.addWidget(QLabel("Lateness Report Results"))
+        lateness_results_label = QLabel("Lateness Report Results")
+        lateness_results_label.setAlignment(Qt.AlignCenter)
+        lateness_results_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px 0px 5px 0px; color: #0F172A;")
+        layout.addWidget(lateness_results_label)
         layout.addWidget(self.results_table)
         
         # Pagination controls for lateness report

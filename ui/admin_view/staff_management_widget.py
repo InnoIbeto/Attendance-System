@@ -80,17 +80,6 @@ class StaffManagementWidget(QWidget):
             QComboBox:focus {
                 border: 2px solid #1E3A8A;  /* Dark blue */
             }
-            QComboBox::drop-down {
-                subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: 25px;
-                border-left: 1px solid #3B82F6;
-            }
-            QComboBox::down-arrow {
-                image: url(noimg);
-                width: 10px;
-                height: 10px;
-            }
             QComboBox QAbstractItemView {
                 color: black;  /* Black text for dropdown list items */
                 background-color: white;
@@ -154,7 +143,10 @@ class StaffManagementWidget(QWidget):
         self.staff_table.setColumnWidth(4, 80)   # Delete button (fixed width)
         self.staff_table.setColumnHidden(5, True)  # Hide the ID storage column
         
-        layout.addWidget(QLabel("Registered Staff"))
+        registered_label = QLabel("Registered Staff")
+        registered_label.setAlignment(Qt.AlignCenter)
+        registered_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px 0px 5px 0px; color: #0F172A;")
+        layout.addWidget(registered_label)
         layout.addWidget(self.staff_table)
         
         # Pagination controls

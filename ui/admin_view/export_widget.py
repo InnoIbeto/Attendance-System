@@ -22,6 +22,10 @@ class ExportWidget(QWidget):
         layout = QVBoxLayout()
         layout.setSpacing(20)
         
+        # Set size constraints to match other pages
+        self.setMinimumWidth(800)
+        self.setMinimumHeight(500)
+        
         # Export group
         export_group = QGroupBox("Export Attendance Data")
         export_group.setStyleSheet("""
@@ -172,6 +176,7 @@ class ExportWidget(QWidget):
         late_count_label.setStyleSheet("color: #0F172A; font-weight: bold;")
         self.export_min_late_count = QLineEdit("1")
         self.export_min_late_count.setPlaceholderText("e.g., 1")
+        self.export_min_late_count.setMaximumWidth(60)  # Limit the width of the input field
         self.export_min_late_count.setStyleSheet("""
             QLineEdit {
                 padding: 6px;
@@ -180,6 +185,7 @@ class ExportWidget(QWidget):
                 color: #0F172A;
                 background-color: #E2E8F0;  /* Light gray when disabled */
                 min-width: 60px;
+                max-width: 60px;
             }
             QLineEdit:enabled {
                 background-color: white;
@@ -195,19 +201,28 @@ class ExportWidget(QWidget):
         self.lateness_filter_checkbox.stateChanged.connect(self.toggle_lateness_filter)
         self.lateness_filter_checkbox.clicked.connect(lambda: self.toggle_lateness_filter(self.lateness_filter_checkbox.checkState()))
         
-        # Add filters to layout
-        filter_layout.addWidget(date_from_label)
-        filter_layout.addWidget(self.export_date_from)
-        filter_layout.addWidget(date_to_label)
-        filter_layout.addWidget(self.export_date_to)
-        filter_layout.addWidget(dept_filter_label)
-        filter_layout.addWidget(self.export_dept_filter)
-        filter_layout.addWidget(staff_id_label)
-        filter_layout.addWidget(self.export_staff_id_filter)
-        filter_layout.addWidget(self.lateness_filter_checkbox)
-        filter_layout.addWidget(late_count_label)
-        filter_layout.addWidget(self.export_min_late_count)
-        filter_layout.addStretch()
+        # Add filters to layout in multiple centered rows to prevent excessive width
+        filter_row1 = QHBoxLayout()
+        filter_row1.addStretch()  # Centering stretch
+        filter_row1.addWidget(date_from_label)
+        filter_row1.addWidget(self.export_date_from)
+        filter_row1.addWidget(date_to_label)
+        filter_row1.addWidget(self.export_date_to)
+        filter_row1.addWidget(dept_filter_label)
+        filter_row1.addWidget(self.export_dept_filter)
+        filter_row1.addStretch()  # Centering stretch
+        
+        filter_row2 = QHBoxLayout()
+        filter_row2.addStretch()  # Centering stretch
+        filter_row2.addWidget(staff_id_label)
+        filter_row2.addWidget(self.export_staff_id_filter)
+        filter_row2.addWidget(self.lateness_filter_checkbox)
+        filter_row2.addWidget(late_count_label)
+        filter_row2.addWidget(self.export_min_late_count)
+        filter_row2.addStretch()  # Centering stretch
+        
+        export_layout.addLayout(filter_row1)
+        export_layout.addLayout(filter_row2)
         
         export_layout.addLayout(filter_layout)
         
@@ -285,6 +300,7 @@ class ExportWidget(QWidget):
                     color: #0F172A;
                     background-color: white;
                     min-width: 60px;
+                    max-width: 60px;
                 }
                 QLineEdit:focus {
                     border: 2px solid #1E3A8A;

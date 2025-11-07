@@ -48,12 +48,6 @@ class DepartmentWidget(QWidget):
             QComboBox:focus {
                 border: 2px solid #1E3A8A;
             }
-            QComboBox::drop-down {
-                subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: 25px;
-                border-left: 1px solid #3B82F6;
-            }
             QComboBox QAbstractItemView {
                 color: black;  /* Black text for dropdown list items */
                 background-color: white;
@@ -105,7 +99,6 @@ class DepartmentWidget(QWidget):
                 padding: 8px;
                 border-radius: 5px;
                 font-weight: bold;
-                max-width: 200px;
             }
             QPushButton:hover {
                 background-color: #2563EB;  /* Medium blue */
@@ -114,7 +107,7 @@ class DepartmentWidget(QWidget):
                 background-color: #1D4ED8;  /* Darker blue */
             }
         """)
-        layout.addWidget(refresh_button, 0, Qt.AlignCenter)
+        layout.addWidget(refresh_button)
         
         self.setLayout(layout)
         
@@ -185,7 +178,10 @@ class DepartmentWidget(QWidget):
         self.dept_staff_table.setColumnWidth(1, 300)  # Name (largest)
         self.dept_staff_table.setColumnWidth(2, 150)  # Department (1/2 of name)
         
-        layout.addWidget(QLabel("Staff by Department"))
+        staff_dept_label = QLabel("Staff by Department")
+        staff_dept_label.setAlignment(Qt.AlignCenter)
+        staff_dept_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px 0px 5px 0px; color: #0F172A;")
+        layout.addWidget(staff_dept_label)
         layout.addWidget(self.dept_staff_table)
         
         tab.setLayout(layout)
@@ -224,7 +220,10 @@ class DepartmentWidget(QWidget):
         self.dept_attendance_table.setColumnWidth(4, 120)  # Time In (1/2 of name, but smaller)
         self.dept_attendance_table.setColumnWidth(5, 120)  # Time Out (1/2 of name, but smaller)
         
-        layout.addWidget(QLabel("Attendance by Department"))
+        attendance_dept_label = QLabel("Attendance by Department")
+        attendance_dept_label.setAlignment(Qt.AlignCenter)
+        attendance_dept_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px 0px 5px 0px; color: #0F172A;")
+        layout.addWidget(attendance_dept_label)
         layout.addWidget(self.dept_attendance_table)
         
         tab.setLayout(layout)

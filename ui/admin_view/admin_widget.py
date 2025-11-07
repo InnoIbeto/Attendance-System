@@ -12,6 +12,7 @@ from ui.admin_view.departments_management_widget import DepartmentsManagementWid
 from ui.admin_view.export_widget import ExportWidget
 from .lateness_report_widget import LatenessReportWidget
 from .department_widget import DepartmentWidget
+from .dashboard_widget import DashboardWidget
 
 
 class SidebarButton(QPushButton):
@@ -80,6 +81,9 @@ class AdminWidget(QWidget):
         main_layout.addWidget(self.content_area, 1)  # Main content takes remaining space
         
         self.setLayout(main_layout)
+        
+        # Show the dashboard by default
+        self.show_dashboard()
 
     def create_sidebar(self):
         # Create sidebar container
@@ -270,7 +274,68 @@ class AdminWidget(QWidget):
         
         return sidebar
 
-    def show_widget(self, widget_name):
+    def show_dashboard(self):
+        # Clear current content
+        for i in reversed(range(self.content_area.layout().count())):
+            widget = self.content_area.layout().itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+        
+        # Create and show the dashboard widget
+        widget = DashboardWidget(self)
+        
+        # Add the widget to the content area
+        self.content_area.layout().addWidget(widget)
+
+    def show_widget(self, widget_name, activate_late_filter=False):
+        # Clear current content
+        for i in reversed(range(self.content_area.layout().count())):
+            widget = self.content_area.layout().itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+        
+        # Create title (except for dashboard which has its own title)
+        if widget_name != "Dashboard":
+            title_label = QLabel(f"{widget_name}")
+            title_label.setAlignment(Qt.AlignCenter)
+            title_label.setStyleSheet("""
+                font-size: 20px; 
+                font-weight: bold; 
+                margin: 15px 10px 10px 10px; 
+                color: #0F172A;
+                border-bottom: 2px solid #3B82F6;
+                padding-bottom: 10px;
+            """)
+            
+            self.content_area.layout().addWidget(title_label)
+        
+        # Create and show the selected widget
+        if widget_name == "Manage Staff":
+            widget = StaffManagementWidget()
+        elif widget_name == "Attendance Records":
+            widget = AttendanceRecordsWidget(apply_late_filter=activate_late_filter, 
+                                           date_filter_today=activate_late_filter)  # Apply today's date when late filter is activated
+        elif widget_name == "Lateness Report":
+            widget = LatenessReportWidget()
+        elif widget_name == "Manage Departments":
+            widget = DepartmentsManagementWidget()
+        elif widget_name == "Departments Overview":
+            widget = DepartmentWidget()
+        elif widget_name == "Export Data":
+            widget = ExportWidget()
+        elif widget_name == "Dashboard":
+            widget = DashboardWidget(self)
+        else:
+            widget = QLabel(f"Content for {widget_name} would go here")
+            widget.setAlignment(Qt.AlignCenter)
+        
+        # Add the widget to the content area
+        self.content_area.layout().addWidget(widget)
+
+    def show_attendance_records_for_today_with_late_filter(self):
+        """Show attendance records for today with late arrivals only"""
+        from PySide6.QtCore import QDate
+        from ui.admin_view.attendance_records_widget import AttendanceRecordsWidget
         # Clear current content
         for i in reversed(range(self.content_area.layout().count())):
             widget = self.content_area.layout().itemAt(i).widget()
@@ -278,7 +343,7 @@ class AdminWidget(QWidget):
                 widget.setParent(None)
         
         # Create title
-        title_label = QLabel(f"{widget_name}")
+        title_label = QLabel("Attendance Records")
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("""
             font-size: 20px; 
@@ -291,22 +356,8 @@ class AdminWidget(QWidget):
         
         self.content_area.layout().addWidget(title_label)
         
-        # Create and show the selected widget
-        if widget_name == "Manage Staff":
-            widget = StaffManagementWidget()
-        elif widget_name == "Attendance Records":
-            widget = AttendanceRecordsWidget()
-        elif widget_name == "Lateness Report":
-            widget = LatenessReportWidget()
-        elif widget_name == "Manage Departments":
-            widget = DepartmentsManagementWidget()
-        elif widget_name == "Departments Overview":
-            widget = DepartmentWidget()
-        elif widget_name == "Export Data":
-            widget = ExportWidget()
-        else:
-            widget = QLabel(f"Content for {widget_name} would go here")
-            widget.setAlignment(Qt.AlignCenter)
+        # Create widget with both filters
+        widget = AttendanceRecordsWidget(apply_late_filter=True, date_filter_today=True)
         
         # Add the widget to the content area
         self.content_area.layout().addWidget(widget)
