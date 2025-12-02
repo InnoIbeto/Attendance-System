@@ -2,8 +2,10 @@
 Attendance widget for staff to log attendance
 """
 
+import os
+import sys
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, 
+    QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QLineEdit, QMessageBox, QGroupBox, QStackedLayout
 )
 from PySide6.QtCore import Qt, QTimer
@@ -12,15 +14,26 @@ from database import DatabaseManager
 from datetime import datetime
 
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+
 class BackgroundWidget(QWidget):
     def __init__(self):
         super().__init__()
-        self.background_image = QPixmap("images/building.jpg")
+        self.background_image = QPixmap(resource_path("images/building.jpg"))
         if self.background_image.isNull():
             # Create a default background if image is not found
             self.background_image = QPixmap(800, 200)
             self.background_image.fill(QColor("#D4CAC9"))
-        
+
         self.setMinimumHeight(200)
         self.setMaximumHeight(300)
     
@@ -54,7 +67,7 @@ class AttendanceWidget(QWidget):
         
         # Add logo to top-right
         logo_label = QLabel()
-        logo_pixmap = QPixmap("images/logo.png")
+        logo_pixmap = QPixmap(resource_path("images/logo.png"))
         if not logo_pixmap.isNull():
             logo_pixmap = logo_pixmap.scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             logo_label.setPixmap(logo_pixmap)

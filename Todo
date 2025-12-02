@@ -85,3 +85,7 @@ future works:
  Notes:
 - When deploying add an app Icon
 - UIUX improvements (include a sysmbol or something to indicate they you developed the app)
+
+
+
+* build command: pyinstaller --onefile --windowed --add-data "images;images" --icon=app_icon.ico --name "Attendance System" main.py
