@@ -80,4 +80,8 @@ Dependencies confirmed:
 
 future works: 
  - include logic for absent staff (track people that did not login to work on x days)
- - UIUX improvements 
+ - append a digital signature to the app.
+
+ Notes:
+- When deploying add an app Icon
+- UIUX improvements (include a sysmbol or something to indicate they you developed the app)

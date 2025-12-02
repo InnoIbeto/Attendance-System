@@ -16,7 +16,7 @@ from ui.attendance_view.attendance_widget import AttendanceWidget
 class AttendanceMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("SEC(NYSC) Attendance System")
+        self.setWindowTitle("Employee Attendance System")
         self.setGeometry(100, 100, 800, 600)
         
         # Set blue and white color theme with improved contrast
@@ -230,8 +230,8 @@ class AttendanceMainWindow(QMainWindow):
 
     def show_admin_panel(self):
         self.stacked_widget.setCurrentWidget(self.admin_widget)
-        self.setWindowTitle("SEC(NYSC) Attendance System - Admin Panel")
+        self.setWindowTitle("Employee Attendance System - Admin Panel")
     
     def show_attendance_view(self):
         self.stacked_widget.setCurrentWidget(self.attendance_widget)
-        self.setWindowTitle("SEC(NYSC) Attendance System")
+        self.setWindowTitle("Employee Attendance System")

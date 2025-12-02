@@ -19,7 +19,7 @@ class BackgroundWidget(QWidget):
         if self.background_image.isNull():
             # Create a default background if image is not found
             self.background_image = QPixmap(800, 200)
-            self.background_image.fill(QColor("#E0F2FE"))
+            self.background_image.fill(QColor("#D4CAC9"))
         
         self.setMinimumHeight(200)
         self.setMaximumHeight(300)
@@ -59,7 +59,7 @@ class AttendanceWidget(QWidget):
             logo_pixmap = logo_pixmap.scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             logo_label.setPixmap(logo_pixmap)
         else:
-            logo_label.setText("SEC Logo")
+            logo_label.setText("Company Logo")
             logo_label.setStyleSheet("color: #1E3A8A; font-weight: bold; font-size: 14px;")
         
         top_layout.addWidget(logo_label)
@@ -69,9 +69,9 @@ class AttendanceWidget(QWidget):
         bg_layout.addStretch()
         
         # Add title in the middle of the background
-        title_label = QLabel("SEC(NYSC) Attendance System")
+        title_label = QLabel("Employee Attendance System")
         title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: white; margin: 10px;")
+        title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #1E3A8A; margin: 10px;")  # Dark blue text to match theme
         bg_layout.addWidget(title_label)
         
         # Add stretch at the bottom
